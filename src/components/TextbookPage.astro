@@ -1,5 +1,7 @@
 ---
+// src/components/TextbookPage.astro
 import Prose from './Prose.astro';
+import { renderInline } from '@/lib/md';
 
 interface Props { data: any }
 const { data } = Astro.props;
@@ -21,7 +23,7 @@ const { originalUrl, intro, parts = [], characters = [], themes = [] } = data ??
     {p.glossary?.length > 0 && (
       <dl class="tb-gloss">
         {p.glossary.map((g: any) => (
-          <div class="tb-gloss-row"><dt>{g.word}</dt><dd>{g.meaning}</dd></div>
+          <div class="tb-gloss-row"><dt>{g.word}</dt><dd set:html={renderInline(g.meaning)} /></div>
         ))}
       </dl>
     )}

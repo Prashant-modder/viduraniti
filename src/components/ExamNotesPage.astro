@@ -1,5 +1,7 @@
 ---
+// src/components/ExamNotesPage.astro
 import Prose from './Prose.astro';
+import { renderInline } from '@/lib/md';
 
 interface Props { data: any }
 const { data } = Astro.props;
@@ -11,7 +13,7 @@ const blocks: any[] = data?.blocks ?? [];
     {b.type === 'keypoints' && (
       <>
         <h2 class="en-heading">{b.title ?? 'Key points'}</h2>
-        <ul class="en-list">{b.items.map((i: string) => <li>{i}</li>)}</ul>
+        <ul class="en-list">{b.items.map((i: string) => <li set:html={renderInline(i)} />)}</ul>
       </>
     )}
 
@@ -48,6 +50,20 @@ const blocks: any[] = data?.blocks ?? [];
       </>
     )}
 
+    {b.type === 'formulas' && (
+      <>
+        <h2 class="en-heading">{b.title ?? 'Key formulas'}</h2>
+        <div class="en-formulas">
+          {b.items.map((f: any) => (
+            <div class="en-formula">
+              <div class="en-formula-name">{f.name}</div>
+              <Prose md={f.tex} />
+            </div>
+          ))}
+        </div>
+      </>
+    )}
+
     {b.type === 'likely' && (
       <>
         <h2 class="en-heading">{b.title ?? 'Likely questions'}</h2>
@@ -55,7 +71,7 @@ const blocks: any[] = data?.blocks ?? [];
           {b.items.map((q: any) => (
             <details class="en-q">
               <summary>
-                <span>{q.q}</span>
+                <span set:html={renderInline(q.q)} />
                 {q.marks != null && <small>{q.marks} {q.marks === 1 ? 'mark' : 'marks'}</small>}
               </summary>
               <div class="en-a"><Prose md={q.a} /></div>
@@ -79,6 +95,9 @@ const blocks: any[] = data?.blocks ?? [];
   .en-checks { list-style: none; display: flex; flex-direction: column; gap: 6px; font-family: var(--font-ui); font-size: 15px; }
   .en-checks li { padding-left: 26px; position: relative; }
   .en-checks li::before { content: '✓'; position: absolute; left: 0; color: var(--green); font-weight: 700; }
+  .en-formulas { display: flex; flex-direction: column; gap: 8px; }
+  .en-formula { padding: 10px 16px; border: 1px solid var(--border); border-left: 3px solid var(--saffron); border-radius: 8px; background: var(--surface); }
+  .en-formula-name { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--ink-muted); }
   .en-table-wrap { overflow-x: auto; }
   .en-table { border-collapse: collapse; width: 100%; font-family: var(--font-ui); font-size: 14px; }
   .en-table th, .en-table td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }

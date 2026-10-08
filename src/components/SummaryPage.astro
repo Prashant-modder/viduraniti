@@ -1,5 +1,7 @@
 ---
+// src/components/SummaryPage.astro
 import Prose from './Prose.astro';
+import { renderInline } from '@/lib/md';
 
 interface Props { data: any }
 const { data } = Astro.props;
@@ -23,7 +25,11 @@ const pose = mascot?.pose;
       <h2 class="sm-heading">{heading}</h2>
       <ul class="sm-list">
         {(items as any[]).map((i) => (
-          <li>{typeof i === 'string' ? i : <><b>{i.label}</b> {i.text}</>}</li>
+          <li>
+            {typeof i === 'string'
+              ? <span set:html={renderInline(i)} />
+              : <><b>{i.label}</b> <span set:html={renderInline(i.text)} /></>}
+          </li>
         ))}
       </ul>
     </section>
