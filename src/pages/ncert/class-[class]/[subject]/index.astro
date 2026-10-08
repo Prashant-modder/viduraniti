@@ -1,0 +1,50 @@
+---
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import { BOOKS, SUBJECT_LABELS } from '@/data/books';
+import { loadBook } from '@/data/loader';
+
+export function getStaticPaths() {
+  return Object.entries(BOOKS).flatMap(([cls, subs]) =>
+    Object.keys(subs).map((sub) => ({ params: { class: cls, subject: `subject:${sub}` } }))
+  );
+}
+
+const { class: classNum = '', subject = '' } = Astro.params;
+const subKey = subject.replace('subject:', '');
+const label = SUBJECT_LABELS[subKey] ?? subKey;
+const book = BOOKS[classNum]?.[subKey];
+
+const { units } = book ? loadBook(classNum, subKey, book.slug) : { units: [] };
+const first = units[0];
+const bookBase = book ? `/ncert/class-${classNum}/${subject}/${book.slug}` : '';
+const openHref = first ? (first.slug ? `${bookBase}/${first.slug}` : first.chapters[0]?.href) : undefined;
+
+const breadcrumb = [
+  { label: 'Home', href: '/' },
+  { label: 'NCERT', href: '/ncert' },
+  { label: `Class ${classNum}`, href: `/ncert/class-${classNum}` },
+  { label },
+];
+---
+
+<BaseLayout title={`${label} · Class ${classNum}`} breadcrumb={breadcrumb}>
+  <div class="vn-page">
+    <p class="vn-eyebrow">Class {classNum}</p>
+    <h1 class="vn-title">{label}</h1>
+    {book && (
+      <div class="vn-list">
+        {openHref ? (
+          <a class="vn-row" href={openHref}>
+            <span>{book.title}</span>
+            <span class="vn-book">Open book →</span>
+        </a>
+        ) : (
+          <div class="vn-row">
+            <span>{book.title}</span>
+            <span class="vn-book">Coming soon</span>
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+</BaseLayout>

@@ -1,0 +1,139 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const breadcrumb = [
+  { label: 'Home', href: '/' },
+  { label: 'NCERT' }
+];
+
+// Generates our numerical index list for classes 1 through 10 cleanly
+const classes = Array.from({ length: 10 }, (_, i) => i + 1);
+---
+
+<BaseLayout title="NCERT" breadcrumb={breadcrumb}>
+  
+  <!-- Outer Layout Shield Wrapper -->
+  <div class="ncert-dashboard-container">
+    
+    <div class="header-panel">
+      <h1 class="page-title">NCERT</h1>
+      <p class="page-subtitle">Select a class to begin</p>
+    </div>
+    
+    <!-- The Responsive Full-Screen Grid Canvas -->
+    <div class="classes-grid">
+      {classes.map((n) => (
+        <a href={`/ncert/class-${n}`} class="class-panel-card">
+          <span class="class-number">{n}</span>
+          <span class="class-label">Class</span>
+        </a>
+      ))}
+    </div>
+
+  </div>
+
+</BaseLayout>
+
+<style>
+  /* 1. Core Container Context: Removes cramped hardcoded paddings */
+  .ncert-dashboard-container {
+    margin-top: 52px;
+    padding: 30px 40px;
+    font-family: var(--font-ui);
+    display: flex;
+    flex-direction: column;
+    
+    /* Forces the view canvas footprint to utilize full screen vertical heights */
+    min-height: calc(100vh - 52px); 
+    box-sizing: border-box;
+  }
+
+  .header-panel {
+    margin-bottom: 24px;
+  }
+
+  .page-title {
+    color: var(--ink);
+    font-size: 2.25rem;
+    font-weight: 800;
+  }
+
+  .page-subtitle {
+    color: var(--ink-muted);
+    margin-top: 6px;
+    font-size: 1rem;
+  }
+
+  /* 2. The Advanced Matrix Grid: Scaled to 5 horizontally and 2 vertically */
+  .classes-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr); /* 5 items horizontally */
+    grid-template-rows: repeat(2, 1fr);    /* 2 rows vertically */
+    gap: 16px;
+    
+    /* Crucial: Telling the grid container to grow and fill all remaining screen vertical height */
+    flex-grow: 1; 
+    width: 100%;
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* 3. High-Impact Action Dashboard Cards */
+  .class-panel-card {
+    display: flex;
+    flex-direction: column; /* Stacks the word "Class" and the Number vertically */
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-family: var(--font-ui);
+    color: var(--ink);
+    text-decoration: none;
+    background: var(--surface);
+    
+    /* Smooth CSS interaction physics loops */
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease, background 0.2s ease;
+    padding: 20px;
+  }
+
+  /* Hover micro-interactions make the platform feel snappy and expensive */
+  .class-panel-card:hover {
+    transform: translateY(-4px); 
+    border-color: var(--indigo);
+    background: color-mix(in srgb, var(--surface) 92%, var(--indigo));
+  }
+
+  .class-number {
+    font-size: 2.5rem; /* Large, bold typography focal anchor */
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .class-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-muted);
+    margin-top: 4px;
+  }
+
+  /* 4. Responsive Mobile Formats: Stacking 5x2 rows is unreadable on mobile vertical views */
+  @media (max-width: 900px) {
+    .classes-grid {
+      grid-template-columns: repeat(2, 1fr); /* Automatically changes to 2 panels wide on tablet devices */
+      grid-template-rows: auto;
+      flex-grow: 0;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .classes-grid {
+      grid-template-columns: 1fr; /* 1 giant panel stack sequence wide on tiny standard handheld viewport phone grids */
+    }
+    .ncert-dashboard-container {
+      padding: 20px;
+    }
+  }
+</style>

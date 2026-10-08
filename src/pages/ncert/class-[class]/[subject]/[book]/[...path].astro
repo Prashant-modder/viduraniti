@@ -1,0 +1,184 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import ChapterSidebar from '@/components/ChapterSidebar.astro';
+import SolutionsPage from '@/components/SolutionsPage.astro';
+import Prose from '@/components/Prose.astro';
+import { loadBook, loadChapter, loadUnit, allRoutes, prettify } from '@/data/loader';
+import { BOOKS, SUBJECT_LABELS } from '@/data/books';
+
+export function getStaticPaths() {
+  return allRoutes().map((r) => ({
+    params: { class: r.cls, subject: `subject:${r.subject}`, book: r.book, path: r.path },
+    props: { kind: r.kind, unitSlug: r.unit, chapterSlug: r.chapter, page: r.page },
+  }));
+}
+
+const RESERVED = ['textbook', 'exam-notes', 'summary'];
+
+const { class: classNum = '', subject = '', book: bookSlug = '' } = Astro.params;
+const { kind, unitSlug, chapterSlug, page } = Astro.props as {
+  kind: 'unit' | 'chapter' | 'page'; unitSlug: string; chapterSlug: string; page: string;
+};
+
+const subKey = subject.replace('subject:', '');
+const subLabel = SUBJECT_LABELS[subKey] ?? subKey;
+const bookData = BOOKS[classNum]?.[subKey];
+const { units } = loadBook(classNum, subKey, bookSlug);
+
+const chapterPath = unitSlug ? `${unitSlug}/${chapterSlug}` : chapterSlug;
+const currentUnit = units.find((u) => u.slug === unitSlug);
+const unitData = kind === 'unit' ? loadUnit(classNum, subKey, bookSlug, unitSlug) : null;
+const { chapter, pages } = kind === 'unit'
+  ? { chapter: null, pages: {} as Record<string, any> }
+  : loadChapter(classNum, subKey, bookSlug, chapterPath);
+
+const bookBase = `/ncert/class-${classNum}/${subject}/${bookSlug}`;
+const chapterBase = `${bookBase}/${chapterPath}`;
+
+const solutionPages = Object.keys(pages).filter((n) => !RESERVED.includes(n));
+const extraPages = ['exam-notes', 'summary'].filter((n) => pages[n]);
+const pageTitle = (n: string) => pages[n]?.meta?.title ?? prettify(n);
+
+const pageLinks = kind === 'unit' ? [] : [
+  { label: 'Textbook', href: chapterBase, active: kind === 'chapter' },
+  ...solutionPages.map((n) => ({
+    label: `Solutions · ${pageTitle(n)}`,
+    href: `${chapterBase}/solutions/${n}`,
+    active: kind === 'page' && page === n,
+  })),
+  ...extraPages.map((n) => ({
+    label: prettify(n),
+    href: `${chapterBase}/${n}`,
+    active: kind === 'page' && page === n,
+  })),
+];
+
+const title =
+  kind === 'unit' ? (unitData?.label ?? currentUnit?.label ?? prettify(unitSlug))
+  : kind === 'chapter' ? (chapter?.title ?? chapterSlug)
+  : pageTitle(page);
+
+const bodyMd: string | undefined = pages[kind === 'chapter' ? 'textbook' : page]?.content;
+const isSolutions = kind === 'page' && !RESERVED.includes(page);
+
+// prev / next
+const chLabel = (c: any) => `Ch ${c.abs}${c.pos ? '-' + c.pos : ''} · ${c.title}`;
+const flat = units.flatMap((u) => u.chapters);
+const idx = flat.findIndex((c) => c.href === chapterBase);
+const pos = solutionPages.indexOf(page);
+const solLink = (n: string) => ({ label: `Solutions · ${pageTitle(n)}`, href: `${chapterBase}/solutions/${n}` });
+const prev = pos > 0 ? solLink(solutionPages[pos - 1])
+  : flat[idx - 1] ? { label: chLabel(flat[idx - 1]), href: flat[idx - 1].href } : null;
+const next = pos >= 0 && pos < solutionPages.length - 1 ? solLink(solutionPages[pos + 1])
+  : flat[idx + 1] ? { label: chLabel(flat[idx + 1]), href: flat[idx + 1].href } : null;
+
+const unitName = currentUnit?.label ?? prettify(unitSlug);
+const eyebrow = kind === 'unit'
+  ? (bookData?.title ?? '')
+  : `${unitSlug ? unitName + ' · ' : ''}Chapter ${chapter?.abs ?? ''}${kind === 'page' ? ' · ' + (chapter?.title ?? '') : ''}`;
+const metaLine = `${bookData?.title} — Class ${classNum} ${subLabel} · NEP 2020`;
+
+const breadcrumb: { label: string; href?: string }[] = [
+  { label: 'Home', href: '/' },
+  { label: 'NCERT', href: '/ncert' },
+  { label: `Class ${classNum}`, href: `/ncert/class-${classNum}` },
+  { label: subLabel, href: `/ncert/class-${classNum}/${subject}` },
+];
+if (kind === 'unit') breadcrumb.push({ label: title });
+else {
+  if (unitSlug) breadcrumb.push({ label: unitName, href: `${bookBase}/${unitSlug}` });
+  if (kind === 'chapter') breadcrumb.push({ label: chapter?.title ?? chapterSlug });
+  else {
+    breadcrumb.push({ label: chapter?.title ?? chapterSlug, href: chapterBase });
+    breadcrumb.push({ label: title });
+  }
+}
+---
+
+<BaseLayout title={`${title} · Class ${classNum}`} breadcrumb={breadcrumb}>
+  <div class="chapter-shell">
+    <ChapterSidebar
+      bookTitle={bookData?.title ?? bookSlug}
+      bookSlug={bookSlug}
+      bookSub="NEP 2020 Edition"
+      classNum={classNum}
+      subject={subKey}
+      units={units}
+      mode={kind === 'unit' ? 'unit' : 'chapter'}
+      activeUnit={unitSlug}
+      activeChapter={chapterSlug}
+      pageLinks={pageLinks}
+    />
+
+    {isSolutions ? (
+      <main class="chapter-main flush">
+        <SolutionsPage
+          title={title}
+          eyebrow={eyebrow}
+          meta={metaLine}
+          subjectTag={subLabel}
+          tags={pages[page]?.meta?.tags ?? ['Solutions']}
+          sections={pages[page]?.sections ?? []}
+          prev={prev}
+          next={next}
+        />
+      </main>
+    ) : (
+      <main class="chapter-main">
+        <div class="content-header">
+          <div class="ch-eyebrow">{eyebrow}</div>
+          <h1 class="ch-title">{title}</h1>
+          {kind !== 'unit' && <div class="ch-meta">{metaLine}</div>}
+        </div>
+
+        {kind === 'unit' && (
+          <div class="chapter-body">
+            <div class="vn-list">
+              {currentUnit?.chapters.map((c) => (
+                <a class="vn-row" href={c.href}>
+                  <small>Ch {c.abs}{c.pos ? `-${c.pos}` : ''}</small>
+                  <span>{c.title}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {kind === 'chapter' && (
+          <div class="chapter-body">
+            {bodyMd ? <Prose md={bodyMd} /> : <p class="vn-muted">Chapter content coming soon.</p>}
+            {solutionPages.length > 0 && (
+              <div class="vn-list">
+                {solutionPages.map((n) => (
+                  <a class="vn-row" href={`${chapterBase}/solutions/${n}`}>
+                    <small>Solutions</small>
+                    <span>{pageTitle(n)}</span>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {kind === 'page' && (
+          <div class="chapter-body">{bodyMd ? <Prose md={bodyMd} /> : <p class="vn-muted">Content coming soon.</p>}</div>
+        )}
+      </main>
+    )}
+  </div>
+</BaseLayout>
+
+<style>
+  .chapter-shell { display: flex; margin-top: 52px; min-height: calc(100vh - 52px); }
+  .chapter-main { flex: 1; min-width: 0; padding: 32px 40px; }
+  .chapter-main.flush { padding: 0; }
+  .content-header { padding-bottom: 24px; border-bottom: 1px solid var(--border); margin-bottom: 32px; }
+  .ch-eyebrow { font-family: var(--font-ui); font-size: 12px; color: var(--ink-muted); margin-bottom: 8px; }
+  .ch-title { font-size: 26px; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
+  .ch-meta { font-family: var(--font-ui); font-size: 13px; color: var(--ink-muted); }
+  .chapter-body { font-family: var(--font-body); }
+  @media (max-width: 768px) {
+    .chapter-shell { display: block; }
+    .chapter-main { padding: 20px 16px; }
+  }
+</style>

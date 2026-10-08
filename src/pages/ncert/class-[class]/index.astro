@@ -1,0 +1,32 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { CLASSES, BOOKS, SUBJECT_LABELS } from '@/data/books';
+
+export function getStaticPaths() {
+  return CLASSES.map((c) => ({ params: { class: String(c) } }));
+}
+
+const { class: classNum = '' } = Astro.params;
+const subjects = Object.entries(BOOKS[classNum] ?? {});
+
+const breadcrumb = [
+  { label: 'Home', href: '/' },
+  { label: 'NCERT', href: '/ncert' },
+  { label: `Class ${classNum}` },
+];
+---
+
+<BaseLayout title={`Class ${classNum}`} breadcrumb={breadcrumb}>
+  <div class="vn-page">
+    <p class="vn-eyebrow">NCERT</p>
+    <h1 class="vn-title">Class {classNum}</h1>
+    <div class="vn-list">
+      {subjects.map(([sub, book]) => (
+        <a class="vn-row" href={`/ncert/class-${classNum}/subject:${sub}`}>
+          <span>{SUBJECT_LABELS[sub] ?? sub}</span>
+          <span class="vn-book">{book.title}</span>
+        </a>
+      ))}
+    </div>
+  </div>
+</BaseLayout>

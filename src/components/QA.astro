@@ -1,0 +1,47 @@
+---
+interface Props {
+  label?: string;
+  question: string;
+  options?: string[];
+  answer?: string | string[];
+}
+const { label, question, options = [], answer } = Astro.props;
+const paras = (a?: string | string[]) =>
+  !a ? [] : Array.isArray(a) ? a.filter(Boolean) : String(a).split(/\n\n+/).filter(Boolean);
+const ans = paras(answer);
+---
+
+<div class="qa">
+  <div class="q-text">{label && <b class="q-label">({label})</b>} {question}</div>
+  {options.length > 0 && (
+    <ul class="q-options">{options.map((o) => <li>{o}</li>)}</ul>
+  )}
+  <div class="answer-label">Answer</div>
+  <div class="answer-text">
+    {ans.length ? ans.map((p) => <p>{p}</p>) : <p class="pending">Answer coming soon.</p>}
+  </div>
+  <div class="answer-actions">
+    <button class="btn-refresh" type="button" disabled><span>↻</span> Rephrase</button>
+    <button class="btn-copy" type="button" data-copy title="Copy answer">⎘</button>
+    <span class="api-nudge">Add a <a href="/settings">Gemini API key</a> to rephrase</span>
+  </div>
+</div>
+
+<style>
+  .qa{margin-top:20px}
+  .q-text{font-size:17px;font-style:italic;color:var(--ink);margin-bottom:12px;line-height:1.6;padding-left:16px;border-left:3px solid var(--saffron)}
+  .q-label{font-family:var(--font-ui);font-style:normal;font-weight:600;color:var(--saffron);margin-right:4px}
+  .q-options{list-style:none;margin:0 0 16px 19px;display:flex;flex-direction:column;gap:4px;font-size:16px;color:var(--ink)}
+  .answer-label{font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+  .answer-label::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block}
+  .answer-text :global(p){margin-bottom:12px;max-width:68ch}
+  .answer-text :global(p:last-child){margin-bottom:0}
+  .pending{color:var(--ink-faint);font-style:italic}
+  .answer-actions{display:flex;align-items:center;gap:8px;margin-top:16px}
+  .btn-refresh{font-family:var(--font-ui);font-size:12px;font-weight:500;background:none;border:1px solid var(--border);border-radius:6px;padding:5px 12px;color:var(--ink-muted);display:flex;align-items:center;gap:6px}
+  .btn-refresh:disabled{opacity:.4;cursor:not-allowed}
+  .btn-copy{font-family:var(--font-ui);font-size:12px;background:none;border:none;color:var(--ink-faint);cursor:pointer;padding:5px 8px;border-radius:4px}
+  .btn-copy:hover{color:var(--ink);background:var(--surface)}
+  .api-nudge{font-family:var(--font-ui);font-size:12px;color:var(--ink-faint);margin-left:4px}
+  .api-nudge a{color:var(--saffron);text-decoration:none}
+</style>

@@ -1,0 +1,29 @@
+---
+import { Marked } from 'marked';
+import markedKatex from 'marked-katex-extension';
+import 'katex/dist/katex.min.css';
+
+interface Props { md: string }
+const { md } = Astro.props;
+
+const marked = new Marked();
+marked.use(markedKatex({ throwOnError: false, nonStandard: true }));
+const html = marked.parse(md) as string;
+---
+
+<div class="prose" set:html={html} />
+
+<style is:global>
+  .prose { max-width: 68ch; font-family: var(--font-body); }
+  .prose h2 { font-family: var(--font-ui); font-size: 20px; font-weight: 600; margin: 32px 0 10px; color: var(--ink); }
+  .prose h3 { font-family: var(--font-ui); font-size: 16px; font-weight: 600; margin: 24px 0 8px; color: var(--ink); }
+  .prose p { margin-bottom: 14px; }
+  .prose ul, .prose ol { margin: 0 0 14px 22px; }
+  .prose li { margin-bottom: 4px; }
+  .prose blockquote { border-left: 3px solid var(--saffron); background: var(--saffron-light); padding: 10px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  .prose code { font-family: ui-monospace, monospace; font-size: .9em; background: var(--surface); padding: 1px 6px; border-radius: 4px; }
+  .prose table { border-collapse: collapse; margin: 16px 0; font-family: var(--font-ui); font-size: 14px; }
+  .prose th, .prose td { border: 1px solid var(--border); padding: 6px 12px; text-align: left; }
+  .prose th { background: var(--surface); }
+  .prose .katex-display { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+</style>

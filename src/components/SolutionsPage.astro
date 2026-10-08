@@ -1,0 +1,131 @@
+---
+import QA from './QA.astro';
+
+interface Part { label: string; question: string; options?: string[]; answer?: string | string[] }
+interface Item {
+  n: number | string;
+  passage?: string;
+  question?: string;
+  options?: string[];
+  answer?: string | string[];
+  parts?: Part[];
+}
+interface Section { roman: string; instruction: string; items: Item[] }
+interface NavLink { label: string; href: string }
+interface Props {
+  title: string;
+  eyebrow: string;
+  meta: string;
+  subjectTag: string;
+  tags?: string[];
+  sections: Section[];
+  prev?: NavLink | null;
+  next?: NavLink | null;
+}
+const { title, eyebrow, meta, subjectTag, tags = [], sections, prev, next } = Astro.props;
+---
+
+<div class="mode-bar">
+  <span class="mode-label">Answer mode</span>
+  <div class="mode-tabs">
+    <button class="mode-tab active" type="button">Default</button>
+    <button class="mode-tab" type="button" disabled title="Add Gemini API key to unlock">Quick</button>
+    <button class="mode-tab" type="button" disabled title="Add Gemini API key to unlock">Detailed</button>
+  </div>
+  <div class="mode-lock">
+    <span>🔒</span>
+    <span>Quick &amp; Detailed need a <a href="/settings">free Gemini API key</a></span>
+  </div>
+</div>
+
+<div class="content-header">
+  <div class="ch-eyebrow">{eyebrow}</div>
+  <h1 class="ch-title">{title}</h1>
+  <div class="ch-meta">{meta}</div>
+  <div class="ch-tags">
+    <span class="tag subject">{subjectTag}</span>
+    {tags.map((t) => <span class="tag">{t}</span>)}
+  </div>
+</div>
+
+<div class="solutions-body">
+  {sections.map((s) => (
+    <section class="sol-section" id={`s${s.roman}`}>
+      <div class="sec-head">
+        <span class="sec-roman">{s.roman}</span>
+        <span class="sec-instruction">{s.instruction}</span>
+      </div>
+
+      {s.items.map((it) => (
+        <div class="question-block" id={`s${s.roman}-q${it.n}`}>
+          <div class="q-number">Question {it.n}</div>
+          {it.passage && <blockquote class="passage" set:html={it.passage.replace(/\n\n+/g, '<br/><br/>')} />}
+          {it.question && (
+            <QA question={it.question} options={it.options} answer={it.answer} />
+          )}
+          {it.parts?.map((p) => (
+            <QA label={p.label} question={p.question} options={p.options} answer={p.answer} />
+          ))}
+        </div>
+      ))}
+    </section>
+  ))}
+</div>
+
+<div class="chapter-nav">
+  {prev ? <a href={prev.href}>← {prev.label}</a> : <span></span>}
+  {next ? <a href={next.href}>{next.label} →</a> : <span></span>}
+</div>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const text = btn.closest('.qa')?.querySelector<HTMLElement>('.answer-text')?.innerText ?? '';
+      await navigator.clipboard.writeText(text);
+      btn.textContent = '✓';
+      setTimeout(() => (btn.textContent = '⎘'), 1500);
+    });
+  });
+</script>
+
+<style>
+  .mode-bar{position:sticky;top:52px;z-index:50;background:var(--bg);border-bottom:1px solid var(--border);padding:10px 40px;display:flex;align-items:center;gap:12px}
+  .mode-label{font-family:var(--font-ui);font-size:12px;color:var(--ink-muted)}
+  .mode-tabs{display:flex;gap:4px;background:var(--surface);border-radius:8px;padding:3px}
+  .mode-tab{font-family:var(--font-ui);font-size:13px;font-weight:500;padding:4px 14px;border-radius:6px;border:none;cursor:pointer;background:none;color:var(--ink-muted);transition:all .15s}
+  .mode-tab.active{background:var(--mode-tab-active);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+  .mode-tab:disabled{cursor:not-allowed;opacity:.4}
+  .mode-lock{margin-left:auto;font-family:var(--font-ui);font-size:12px;color:var(--ink-muted);display:flex;align-items:center;gap:6px;background:var(--surface);border-radius:6px;padding:5px 12px}
+  .mode-lock a{color:var(--saffron);text-decoration:none;font-weight:500}
+
+  .content-header{padding:32px 40px 24px;border-bottom:1px solid var(--border)}
+  .ch-eyebrow{font-family:var(--font-ui);font-size:12px;color:var(--ink-muted);margin-bottom:8px}
+  .ch-title{font-size:26px;font-weight:600;line-height:1.25;color:var(--ink);margin-bottom:8px}
+  .ch-meta{font-family:var(--font-ui);font-size:13px;color:var(--ink-muted)}
+  .ch-tags{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .tag{font-family:var(--font-ui);font-size:11px;font-weight:500;padding:3px 10px;border-radius:999px;background:var(--surface);color:var(--ink-muted);border:1px solid var(--border)}
+  .tag.subject{background:var(--saffron-light);color:var(--tag-text);border-color:var(--tag-border)}
+
+  .solutions-body{padding:32px 40px}
+  .sol-section{margin-bottom:48px}
+  .sec-head{display:flex;align-items:baseline;gap:12px;margin-bottom:24px;padding-bottom:12px;border-bottom:2px solid var(--saffron)}
+  .sec-roman{font-family:var(--font-ui);font-size:20px;font-weight:700;color:var(--saffron);min-width:28px}
+  .sec-instruction{font-family:var(--font-ui);font-size:16px;font-weight:600;color:var(--ink)}
+
+  .question-block{margin-bottom:40px;padding-bottom:40px;border-bottom:1px solid var(--border)}
+  .sol-section .question-block:last-child{border-bottom:none;margin-bottom:0}
+  .q-number{font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+  .passage{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:8px;font-size:16px;line-height:1.7;color:var(--ink);max-width:68ch}
+
+  .chapter-nav{display:flex;justify-content:space-between;gap:12px;padding:24px 40px 80px;border-top:1px solid var(--border)}
+  .chapter-nav a{font-family:var(--font-ui);font-size:14px;font-weight:500;color:var(--ink);text-decoration:none;padding:8px 14px;border:1px solid var(--border);border-radius:8px;transition:all .15s}
+  .chapter-nav a:hover{border-color:var(--saffron);background:var(--surface)}
+
+  @media(max-width:768px){
+    .mode-bar{padding:10px 16px;flex-wrap:wrap}
+    .mode-lock{margin-left:0;font-size:11px}
+    .content-header{padding:20px 16px 16px}
+    .solutions-body{padding:20px 16px}
+    .chapter-nav{padding:16px 16px 60px;flex-direction:column}
+  }
+</style>

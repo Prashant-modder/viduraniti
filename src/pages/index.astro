@@ -1,17 +1,67 @@
 ---
+import BaseLayout from '../layouts/BaseLayout.astro';
 
+const breadcrumb = [{ label: 'Home' }];
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<BaseLayout title="Home" breadcrumb={breadcrumb}>
+  <div class="hero-wrapper">
+    <div class="brand-content">
+      <h1 class="hero-title">ViduraNiti</h1>
+      <p class="hero-subtitle">CBSE Classes 1–10 · NEP 2020</p>
+      <div class="cta-row">
+        <a href="/ncert" class="cta-button">Browse NCERT →</a>
+        <a href="/about" class="cta-button secondary">About</a>
+      </div>
+    </div>
+
+    <dotlottie-player
+      src="/assets/student.lottie"
+      autoplay
+      loop
+      speed="0.5"
+      background="transparent"
+      class="clean-mascot-backdrop"
+    ></dotlottie-player>
+  </div>
+</BaseLayout>
+
+<script>
+  import '@dotlottie/player-component';
+</script>
+
+<style>
+  .hero-wrapper {
+    margin: 52px auto 0;
+    padding: 60px 40px;
+    display: flex;
+    align-items: center;
+    max-width: 1200px;
+    position: relative;
+    min-height: calc(100vh - 120px);
+    overflow: hidden;
+  }
+  .brand-content { max-width: 600px; font-family: var(--font-ui); padding: 20px; z-index: 10; }
+  .hero-title { font-size: 3.5rem; font-weight: 800; color: var(--ink); line-height: 1.1; }
+  .hero-subtitle { color: var(--ink-muted); font-size: 1.25rem; margin-top: 12px; margin-bottom: 32px; }
+  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .cta-button {
+    font-size: 14px; font-weight: 500; padding: 10px 20px;
+    background: var(--indigo); color: #fff; border: 1px solid var(--indigo);
+    border-radius: 8px; text-decoration: none; transition: background .2s ease; display: inline-block;
+  }
+  .cta-button:hover { background: color-mix(in srgb, var(--indigo) 85%, #fff); }
+  .cta-button.secondary { background: transparent; color: var(--ink); border-color: var(--border); }
+  .cta-button.secondary:hover { border-color: var(--saffron); background: transparent; }
+  .clean-mascot-backdrop {
+    display: block; position: absolute; bottom: 0; right: 0;
+    width: 540px; height: 540px; opacity: .18; z-index: 1; pointer-events: none;
+  }
+  @media (max-width: 768px) {
+    .hero-wrapper { flex-direction: column; justify-content: flex-start; text-align: center; padding: 40px 20px; min-height: auto; }
+    .brand-content { padding: 0; margin-top: 40px; }
+    .cta-row { justify-content: center; }
+    .hero-title { font-size: 2.5rem; }
+    .clean-mascot-backdrop { width: 100%; height: 320px; opacity: .12; }
+  }
+</style>

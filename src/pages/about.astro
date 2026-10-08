@@ -1,0 +1,10 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+const breadcrumb = [{ label: 'Home', href: '/' }, { label: 'About' }];
+---
+<BaseLayout title="About" breadcrumb={breadcrumb}>
+  <div class="vn-page">
+    <h1 class="vn-title">About ViduraNiti</h1>
+    <p class="vn-muted">Study material for CBSE Classes 1–10, based only on the NEP 2020 / NCF-SE 2023 NCERT textbooks.</p>
+  </div>
+</BaseLayout>
