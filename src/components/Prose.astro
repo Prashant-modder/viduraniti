@@ -1,20 +1,17 @@
 ---
-import { Marked } from 'marked';
-import markedKatex from 'marked-katex-extension';
 import 'katex/dist/katex.min.css';
+import { renderMd } from '@/lib/md';
 
 interface Props { md: string }
 const { md } = Astro.props;
-
-const marked = new Marked();
-marked.use(markedKatex({ throwOnError: false, nonStandard: true }));
-const html = marked.parse(md) as string;
+const html = renderMd(md);
 ---
 
 <div class="prose" set:html={html} />
 
 <style is:global>
   .prose { max-width: 68ch; font-family: var(--font-body); }
+  .prose > :last-child { margin-bottom: 0; }
   .prose h2 { font-family: var(--font-ui); font-size: 20px; font-weight: 600; margin: 32px 0 10px; color: var(--ink); }
   .prose h3 { font-family: var(--font-ui); font-size: 16px; font-weight: 600; margin: 24px 0 8px; color: var(--ink); }
   .prose p { margin-bottom: 14px; }
@@ -26,4 +23,5 @@ const html = marked.parse(md) as string;
   .prose th, .prose td { border: 1px solid var(--border); padding: 6px 12px; text-align: left; }
   .prose th { background: var(--surface); }
   .prose .katex-display { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+  .blank { display: inline-block; min-width: 5.5ch; border-bottom: 1.5px solid var(--ink-muted); margin: 0 2px; transform: translateY(2px); }
 </style>

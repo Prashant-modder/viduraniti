@@ -1,14 +1,30 @@
 ---
 import QA from './QA.astro';
+import Prose from './Prose.astro';
+import WordBox from './qa/WordBox.astro';
+import { renderMd } from '@/lib/md';
 
-interface Part { label: string; question: string; options?: string[]; answer?: string | string[] }
-interface Item {
-  n: number | string;
-  passage?: string;
+type QType = 'short' | 'long' | 'mcq' | 'fill' | 'rectify' | 'activity' | 'blanks' | 'match' | 'order';
+type Answer = string | string[] | number[];
+
+// A question or a labelled sub-part. Which fields apply depends on `type` (see QA.astro).
+interface Q {
+  type?: QType;
   question?: string;
   options?: string[];
-  answer?: string | string[];
-  parts?: Part[];
+  wordBox?: string[];
+  example?: string;
+  left?: string[];
+  right?: string[];
+  items?: string[];
+  answer?: Answer;
+}
+interface Part extends Q { label: string }
+interface Item extends Q {
+  n: number | string;
+  passage?: string;                              // extract / paragraph shown above the question(s)
+  reference?: { title: string; body: string };   // collapsible supporting text (transcript, printed answers)
+  parts?: Part[];                                // when present, the item-level question fields are ignored
 }
 interface Section { roman: string; instruction: string; items: Item[] }
 interface NavLink { label: string; href: string }
@@ -23,6 +39,8 @@ interface Props {
   next?: NavLink | null;
 }
 const { title, eyebrow, meta, subjectTag, tags = [], sections, prev, next } = Astro.props;
+
+const passageHtml = (p: string) => renderMd(p);
 ---
 
 <div class="mode-bar">
@@ -59,13 +77,47 @@ const { title, eyebrow, meta, subjectTag, tags = [], sections, prev, next } = As
       {s.items.map((it) => (
         <div class="question-block" id={`s${s.roman}-q${it.n}`}>
           <div class="q-number">Question {it.n}</div>
-          {it.passage && <blockquote class="passage" set:html={it.passage.replace(/\n\n+/g, '<br/><br/>')} />}
-          {it.question && (
-            <QA question={it.question} options={it.options} answer={it.answer} />
+
+          {it.reference && (
+            <details class="reference">
+              <summary>{it.reference.title}</summary>
+              <div class="ref-body"><Prose md={it.reference.body} /></div>
+            </details>
           )}
-          {it.parts?.map((p) => (
-            <QA label={p.label} question={p.question} options={p.options} answer={p.answer} />
-          ))}
+
+          {(it.parts || it.passage) && it.wordBox && <WordBox words={it.wordBox} />}
+          {it.passage && <blockquote class="passage" set:html={passageHtml(it.passage)} />}
+
+          {it.parts ? (
+            it.parts.map((p) => (
+              <QA
+                label={p.label}
+                type={p.type}
+                question={p.question}
+                options={p.options}
+                wordBox={p.wordBox}
+                example={p.example}
+                left={p.left}
+                right={p.right}
+                items={p.items}
+                answer={p.answer}
+              />
+            ))
+          ) : (
+            <>
+              <QA
+                type={it.type}
+                question={it.question}
+                options={it.options}
+                wordBox={it.passage ? undefined : it.wordBox}
+                example={it.example}
+                left={it.left}
+                right={it.right}
+                items={it.items}
+                answer={it.answer}
+              />
+            </>
+          )}
         </div>
       ))}
     </section>
@@ -116,6 +168,15 @@ const { title, eyebrow, meta, subjectTag, tags = [], sections, prev, next } = As
   .sol-section .question-block:last-child{border-bottom:none;margin-bottom:0}
   .q-number{font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
   .passage{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:8px;font-size:16px;line-height:1.7;color:var(--ink);max-width:68ch}
+  .passage :global(p){margin-bottom:12px}
+  .passage :global(p:last-child){margin-bottom:0}
+  .passage :global(.blank){display:inline-block;min-width:5.5ch;border-bottom:1.5px solid var(--ink-muted);margin:0 2px;transform:translateY(2px)}
+
+  .reference{max-width:68ch;margin-bottom:16px;border:1px solid var(--border);border-radius:8px;background:var(--bg)}
+  .reference summary{cursor:pointer;padding:10px 16px;font-family:var(--font-ui);font-size:13px;font-weight:500;color:var(--ink-muted)}
+  .reference summary:hover{color:var(--ink)}
+  .reference[open] summary{border-bottom:1px solid var(--border);color:var(--ink)}
+  .ref-body{padding:14px 16px;font-size:15px}
 
   .chapter-nav{display:flex;justify-content:space-between;gap:12px;padding:24px 40px 80px;border-top:1px solid var(--border)}
   .chapter-nav a{font-family:var(--font-ui);font-size:14px;font-weight:500;color:var(--ink);text-decoration:none;padding:8px 14px;border:1px solid var(--border);border-radius:8px;transition:all .15s}

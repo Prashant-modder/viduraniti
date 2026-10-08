@@ -1,25 +1,80 @@
 ---
+import 'katex/dist/katex.min.css';
+import Prose from './Prose.astro';
+import Match from './qa/Match.astro';
+import Order from './qa/Order.astro';
+import WordBox from './qa/WordBox.astro';
+import { renderInline } from '@/lib/md';
+
+/*
+  Question types
+  short | long | mcq | fill | rectify   answer: Markdown string (or string[] = one paragraph each)
+  activity                              answer: Markdown "sample answer" (no single right answer)
+  blanks                                answer: string[], one entry per numbered blank
+  match                                 left[], right[]; answer: string[] of Column 2 letters in Column 1 order
+  order                                 items[]; answer: number[] of item numbers in correct order
+  If `type` is omitted: options present -> mcq, otherwise short.
+*/
 interface Props {
   label?: string;
-  question: string;
+  type?: 'short' | 'long' | 'mcq' | 'fill' | 'rectify' | 'activity' | 'blanks' | 'match' | 'order';
+  question?: string;
   options?: string[];
-  answer?: string | string[];
+  wordBox?: string[];
+  example?: string;
+  left?: string[];
+  right?: string[];
+  items?: string[];
+  answer?: string | string[] | number[];
 }
-const { label, question, options = [], answer } = Astro.props;
-const paras = (a?: string | string[]) =>
-  !a ? [] : Array.isArray(a) ? a.filter(Boolean) : String(a).split(/\n\n+/).filter(Boolean);
-const ans = paras(answer);
+const { label, type, question, options = [], wordBox = [], example, left = [], right = [], items = [], answer } = Astro.props;
+
+const t = type ?? (options.length ? 'mcq' : 'short');
+const isActivity = t === 'activity';
+const hasAnswer = Array.isArray(answer) ? answer.length > 0 : !!answer;
+
+const asStrings = (a: unknown): string[] => (Array.isArray(a) ? a.map(String) : a ? [String(a)] : []);
+const textAnswer = asStrings(answer).filter(Boolean).join('\n\n');
+const listAnswer = asStrings(answer);
+const orderAnswer = Array.isArray(answer) ? answer.map(Number) : [];
 ---
 
 <div class="qa">
-  <div class="q-text">{label && <b class="q-label">({label})</b>} {question}</div>
-  {options.length > 0 && (
-    <ul class="q-options">{options.map((o) => <li>{o}</li>)}</ul>
+  {(question || label) && (
+    <div class="q-text">
+      {label && <b class="q-label">({label})</b>}
+      {question && <span set:html={renderInline(question)} />}
+    </div>
   )}
-  <div class="answer-label">Answer</div>
+
+  <WordBox words={wordBox} />
+
+  {example && (
+    <p class="example"><b>Example:</b> <span set:html={renderInline(example)} /></p>
+  )}
+
+  {options.length > 0 && (
+    <ul class="q-options">{options.map((o) => <li set:html={renderInline(o)} />)}</ul>
+  )}
+
+  {t === 'match' && <Match mode="prompt" left={left} right={right} />}
+  {t === 'order' && <Order mode="prompt" items={items} />}
+
+  <div class="answer-label">{isActivity ? 'Sample answer' : 'Answer'}</div>
   <div class="answer-text">
-    {ans.length ? ans.map((p) => <p>{p}</p>) : <p class="pending">Answer coming soon.</p>}
+    {!hasAnswer ? (
+      <p class="pending">Answer coming soon.</p>
+    ) : t === 'blanks' ? (
+      <ol class="blank-answers">{listAnswer.map((a) => <li set:html={renderInline(a)} />)}</ol>
+    ) : t === 'match' ? (
+      <Match mode="answer" left={left} right={right} answer={listAnswer} />
+    ) : t === 'order' ? (
+      <Order mode="answer" items={items} answer={orderAnswer} />
+    ) : (
+      <Prose md={textAnswer} />
+    )}
   </div>
+
   <div class="answer-actions">
     <button class="btn-refresh" type="button" disabled><span>↻</span> Rephrase</button>
     <button class="btn-copy" type="button" data-copy title="Copy answer">⎘</button>
@@ -32,11 +87,19 @@ const ans = paras(answer);
   .q-text{font-size:17px;font-style:italic;color:var(--ink);margin-bottom:12px;line-height:1.6;padding-left:16px;border-left:3px solid var(--saffron)}
   .q-label{font-family:var(--font-ui);font-style:normal;font-weight:600;color:var(--saffron);margin-right:4px}
   .q-options{list-style:none;margin:0 0 16px 19px;display:flex;flex-direction:column;gap:4px;font-size:16px;color:var(--ink)}
+
+  .example{max-width:68ch;margin:0 0 14px 19px;font-size:15px;color:var(--ink-muted)}
+  .example b{font-family:var(--font-ui);font-size:13px;color:var(--ink)}
+
   .answer-label{font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
   .answer-label::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block}
   .answer-text :global(p){margin-bottom:12px;max-width:68ch}
   .answer-text :global(p:last-child){margin-bottom:0}
   .pending{color:var(--ink-faint);font-style:italic}
+  .blank-answers{max-width:68ch;margin:0 0 0 22px;font-size:16px;line-height:1.6}
+  .blank-answers li{margin-bottom:4px;padding-left:4px}
+  .blank-answers li::marker{color:var(--green);font-family:var(--font-ui);font-weight:600}
+
   .answer-actions{display:flex;align-items:center;gap:8px;margin-top:16px}
   .btn-refresh{font-family:var(--font-ui);font-size:12px;font-weight:500;background:none;border:1px solid var(--border);border-radius:6px;padding:5px 12px;color:var(--ink-muted);display:flex;align-items:center;gap:6px}
   .btn-refresh:disabled{opacity:.4;cursor:not-allowed}
@@ -44,4 +107,5 @@ const ans = paras(answer);
   .btn-copy:hover{color:var(--ink);background:var(--surface)}
   .api-nudge{font-family:var(--font-ui);font-size:12px;color:var(--ink-faint);margin-left:4px}
   .api-nudge a{color:var(--saffron);text-decoration:none}
+  .answer-text :global(.blank), .q-text :global(.blank), .q-options :global(.blank){display:inline-block;min-width:5.5ch;border-bottom:1.5px solid var(--ink-muted);margin:0 2px;transform:translateY(2px)}
 </style>

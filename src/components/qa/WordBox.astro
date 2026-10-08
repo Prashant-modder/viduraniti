@@ -1,0 +1,20 @@
+---
+// The dashed "choose from the box" panel printed above fill-in and word-choice exercises.
+interface Props { words: string[] }
+const { words = [] } = Astro.props;
+---
+
+{words.length > 0 && (
+  <div class="word-box">{words.map((w) => <span>{w}</span>)}</div>
+)}
+
+<style>
+  .word-box {
+    display: flex; flex-wrap: wrap; gap: 6px 20px;
+    max-width: 68ch; margin: 0 0 16px;
+    padding: 10px 14px;
+    border: 1.5px dashed var(--green); border-radius: 8px;
+    background: var(--green-light);
+    font-family: var(--font-ui); font-size: 14px; color: var(--ink);
+  }
+</style>

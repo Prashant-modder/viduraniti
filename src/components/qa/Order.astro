@@ -1,0 +1,36 @@
+---
+import { renderInline } from '@/lib/md.ts';
+
+// mode "prompt": the items as printed, numbered 1..n.
+// mode "answer": the items in correct order. `answer` lists item numbers (1-based) in that order,
+// e.g. [5, 8, 2] means item 5 happens first, then item 8, then item 2.
+interface Props {
+  mode: 'prompt' | 'answer';
+  items: string[];
+  answer?: number[];
+}
+const { mode, items, answer = [] } = Astro.props;
+const ordered = answer.map((n) => ({ n: Number(n), text: items[Number(n) - 1] ?? '' }));
+---
+
+{mode === 'prompt' ? (
+  <ol class="order-prompt">
+    {items.map((t) => <li set:html={renderInline(t)} />)}
+  </ol>
+) : (
+  <ol class="order-answer">
+    {ordered.map((o) => (
+      <li>
+        <span set:html={renderInline(o.text)} />
+        <span class="was">(item {o.n})</span>
+      </li>
+    ))}
+  </ol>
+)}
+
+<style>
+  .order-prompt, .order-answer { max-width: 68ch; margin: 4px 0 16px 22px; font-family: var(--font-body); font-size: 16px; line-height: 1.6; }
+  .order-prompt li, .order-answer li { margin-bottom: 6px; padding-left: 4px; }
+  .order-answer li::marker { color: var(--green); font-family: var(--font-ui); font-weight: 600; }
+  .was { font-family: var(--font-ui); font-size: 12px; color: var(--ink-faint); margin-left: 8px; white-space: nowrap; }
+</style>

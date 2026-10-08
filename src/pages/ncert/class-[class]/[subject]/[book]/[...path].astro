@@ -35,7 +35,12 @@ const { chapter, pages } = kind === 'unit'
 const bookBase = `/ncert/class-${classNum}/${subject}/${bookSlug}`;
 const chapterBase = `${bookBase}/${chapterPath}`;
 
-const solutionPages = Object.keys(pages).filter((n) => !RESERVED.includes(n));
+// Solutions pages follow the textbook's own exercise order via `meta.order`
+// (files without it sort last, alphabetically).
+const orderOf = (n: string): number => pages[n]?.meta?.order ?? 999;
+const solutionPages = Object.keys(pages)
+  .filter((n) => !RESERVED.includes(n))
+  .sort((a, b) => orderOf(a) - orderOf(b) || a.localeCompare(b));
 const extraPages = ['exam-notes', 'summary'].filter((n) => pages[n]);
 const pageTitle = (n: string) => pages[n]?.meta?.title ?? prettify(n);
 

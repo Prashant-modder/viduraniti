@@ -1,0 +1,61 @@
+---
+import { renderInline } from '@/lib/md';
+
+// mode "prompt": shows Column 1 / Column 2 side by side.
+// mode "answer": shows each Column 1 item with its matching Column 2 item.
+// `answer` is the list of Column 2 letters in Column 1 order, e.g. ["C", "E", "F"].
+interface Props {
+  mode: 'prompt' | 'answer';
+  left: string[];
+  right: string[];
+  answer?: string[];
+  leftHead?: string;
+  rightHead?: string;
+}
+const { mode, left, right, answer = [], leftHead = 'Column 1', rightHead = 'Column 2' } = Astro.props;
+
+const ROMAN = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x', 'xi', 'xii', 'xiii', 'xiv', 'xv'];
+const letter = (i: number) => String.fromCharCode(65 + i);
+const rightOf = (l: string) => right[String(l).trim().toUpperCase().charCodeAt(0) - 65] ?? '';
+const rows = Math.max(left.length, right.length);
+---
+
+{mode === 'prompt' ? (
+  <table class="match">
+    <thead><tr><th>{leftHead}</th><th>{rightHead}</th></tr></thead>
+    <tbody>
+      {Array.from({ length: rows }, (_, i) => (
+        <tr>
+          <td>{left[i] !== undefined && <><span class="mk">({ROMAN[i]})</span> <span set:html={renderInline(left[i])} /></>}</td>
+          <td>{right[i] !== undefined && <><span class="mk">{letter(i)}.</span> <span set:html={renderInline(right[i])} /></>}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+) : (
+  <table class="match answer">
+    <thead><tr><th>{leftHead}</th><th>Matches</th></tr></thead>
+    <tbody>
+      {left.map((l, i) => (
+        <tr>
+          <td><span class="mk">({ROMAN[i]})</span> <span set:html={renderInline(l)} /></td>
+          <td>
+            <span class="mk">{String(answer[i] ?? '').toUpperCase()}.</span>{' '}
+            <span set:html={renderInline(rightOf(answer[i] ?? ''))} />
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+)}
+
+<style>
+  .match { border-collapse: collapse; width: 100%; max-width: 68ch; margin: 4px 0 16px; font-family: var(--font-ui); font-size: 14px; line-height: 1.5; }
+  .match th, .match td { border: 1px solid var(--border); padding: 7px 12px; text-align: left; vertical-align: top; }
+  .match th { background: var(--surface); font-weight: 600; color: var(--ink-muted); font-size: 12px; }
+  .match:not(.answer) th { background: var(--green-light); color: var(--green); }
+  .match:not(.answer) td { background: var(--green-light); }
+  .mk { color: var(--ink-muted); font-weight: 500; margin-right: 2px; }
+  .answer .mk { color: var(--green); }
+  @media (max-width: 480px) { .match th, .match td { padding: 6px 8px; font-size: 13px; } }
+</style>
