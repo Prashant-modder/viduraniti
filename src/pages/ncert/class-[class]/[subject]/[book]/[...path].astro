@@ -2,8 +2,12 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import ChapterSidebar from '@/components/ChapterSidebar.astro';
 import SolutionsPage from '@/components/SolutionsPage.astro';
-import Prose from '@/components/Prose.astro';
-import { loadBook, loadChapter, loadUnit, allRoutes, prettify } from '@/data/loader';
+import PageShell from '@/components/PageShell.astro';
+import TextbookPage from '@/components/TextbookPage.astro';
+import ExamNotesPage from '@/components/ExamNotesPage.astro';
+import SummaryPage from '@/components/SummaryPage.astro';
+import AnimationPage from '@/components/AnimationPage.astro';
+import { loadBook, loadChapter, loadUnit, allRoutes, solutionKeys, prettify, RESERVED } from '@/data/loader';
 import { BOOKS, SUBJECT_LABELS } from '@/data/books';
 
 export function getStaticPaths() {
@@ -12,8 +16,6 @@ export function getStaticPaths() {
     props: { kind: r.kind, unitSlug: r.unit, chapterSlug: r.chapter, page: r.page },
   }));
 }
-
-const RESERVED = ['textbook', 'exam-notes', 'summary'];
 
 const { class: classNum = '', subject = '', book: bookSlug = '' } = Astro.params;
 const { kind, unitSlug, chapterSlug, page } = Astro.props as {
@@ -28,54 +30,60 @@ const { units } = loadBook(classNum, subKey, bookSlug);
 const chapterPath = unitSlug ? `${unitSlug}/${chapterSlug}` : chapterSlug;
 const currentUnit = units.find((u) => u.slug === unitSlug);
 const unitData = kind === 'unit' ? loadUnit(classNum, subKey, bookSlug, unitSlug) : null;
-const { chapter, pages } = kind === 'unit'
-  ? { chapter: null, pages: {} as Record<string, any> }
-  : loadChapter(classNum, subKey, bookSlug, chapterPath);
+const empty = { chapter: null as any, pages: {} as Record<string, any>, animations: {} as Record<string, any> };
+const { chapter, pages, animations } = kind === 'unit' ? empty : loadChapter(classNum, subKey, bookSlug, chapterPath);
 
 const bookBase = `/ncert/class-${classNum}/${subject}/${bookSlug}`;
 const chapterBase = `${bookBase}/${chapterPath}`;
 
-// Solutions pages follow the textbook's own exercise order via `meta.order`
-// (files without it sort last, alphabetically).
-const orderOf = (n: string): number => pages[n]?.meta?.order ?? 999;
-const solutionPages = Object.keys(pages)
-  .filter((n) => !RESERVED.includes(n))
-  .sort((a, b) => orderOf(a) - orderOf(b) || a.localeCompare(b));
-const extraPages = ['exam-notes', 'summary'].filter((n) => pages[n]);
-const pageTitle = (n: string) => pages[n]?.meta?.title ?? prettify(n);
+// What kind of page is this?
+const isAnim = page.startsWith('animations/');
+const animKey = isAnim ? page.slice('animations/'.length) : '';
+const pageMod = kind === 'page' ? (isAnim ? animations[animKey] : pages[page]) : null;
+const pt: string = kind !== 'page' ? kind : isAnim ? 'animation' : RESERVED.includes(page) ? page : 'solutions';
 
-const pageLinks = kind === 'unit' ? [] : [
-  { label: 'Textbook', href: chapterBase, active: kind === 'chapter' },
-  ...solutionPages.map((n) => ({
-    label: `Solutions · ${pageTitle(n)}`,
-    href: `${chapterBase}/solutions/${n}`,
-    active: kind === 'page' && page === n,
+// Ordered page list for this chapter: textbook, exam-notes, summary, solutions (meta.order), animations
+const solKeys = solutionKeys(pages);
+const animKeys = Object.keys(animations).sort();
+const solTitle = (n: string) => pages[n]?.meta?.title ?? prettify(n);
+const chapterPages = [
+  ...RESERVED.filter((n) => pages[n]).map((n) => ({
+    key: n, label: pages[n]?.meta?.title ?? prettify(n), href: `${chapterBase}/${n}`,
   })),
-  ...extraPages.map((n) => ({
-    label: prettify(n),
-    href: `${chapterBase}/${n}`,
-    active: kind === 'page' && page === n,
+  ...solKeys.map((n) => ({
+    key: n, label: `Solutions · ${solTitle(n)}`, href: `${chapterBase}/solutions/${n}`,
+  })),
+  ...animKeys.map((n) => ({
+    key: `animations/${n}`, label: `Animation · ${animations[n]?.meta?.title ?? prettify(n)}`,
+    href: `${chapterBase}/animations/${n}`,
   })),
 ];
+
+const pageLinks = kind === 'unit' ? [] : chapterPages.map((l) => ({
+  label: l.label, href: l.href, active: kind === 'page' && l.key === page,
+}));
 
 const title =
   kind === 'unit' ? (unitData?.label ?? currentUnit?.label ?? prettify(unitSlug))
   : kind === 'chapter' ? (chapter?.title ?? chapterSlug)
-  : pageTitle(page);
+  : (pageMod?.meta?.title ?? prettify(isAnim ? animKey : page));
 
-const bodyMd: string | undefined = pages[kind === 'chapter' ? 'textbook' : page]?.content;
-const isSolutions = kind === 'page' && !RESERVED.includes(page);
-
-// prev / next
+// prev / next: pages within the chapter, then neighbouring chapters
 const chLabel = (c: any) => `Ch ${c.abs}${c.pos ? '-' + c.pos : ''} · ${c.title}`;
 const flat = units.flatMap((u) => u.chapters);
 const idx = flat.findIndex((c) => c.href === chapterBase);
-const pos = solutionPages.indexOf(page);
-const solLink = (n: string) => ({ label: `Solutions · ${pageTitle(n)}`, href: `${chapterBase}/solutions/${n}` });
-const prev = pos > 0 ? solLink(solutionPages[pos - 1])
-  : flat[idx - 1] ? { label: chLabel(flat[idx - 1]), href: flat[idx - 1].href } : null;
-const next = pos >= 0 && pos < solutionPages.length - 1 ? solLink(solutionPages[pos + 1])
-  : flat[idx + 1] ? { label: chLabel(flat[idx + 1]), href: flat[idx + 1].href } : null;
+const pi = chapterPages.findIndex((l) => l.key === page);
+const prevCh = flat[idx - 1] ? { label: chLabel(flat[idx - 1]), href: flat[idx - 1].href } : null;
+const nextCh = flat[idx + 1] ? { label: chLabel(flat[idx + 1]), href: flat[idx + 1].href } : null;
+
+const prev = kind === 'unit' ? null
+  : kind === 'chapter' ? prevCh
+  : pi > 0 ? chapterPages[pi - 1]
+  : { label: 'Chapter overview', href: chapterBase };
+const next = kind === 'unit' ? null
+  : kind === 'chapter' ? (chapterPages[0] ?? nextCh)
+  : pi >= 0 && pi < chapterPages.length - 1 ? chapterPages[pi + 1]
+  : nextCh;
 
 const unitName = currentUnit?.label ?? prettify(unitSlug);
 const eyebrow = kind === 'unit'
@@ -115,29 +123,32 @@ else {
       pageLinks={pageLinks}
     />
 
-    {isSolutions ? (
+    {pt === 'solutions' ? (
       <main class="chapter-main flush">
         <SolutionsPage
           title={title}
           eyebrow={eyebrow}
           meta={metaLine}
           subjectTag={subLabel}
-          tags={pages[page]?.meta?.tags ?? ['Solutions']}
-          sections={pages[page]?.sections ?? []}
+          tags={pageMod?.meta?.tags ?? ['Solutions']}
+          sections={pageMod?.sections ?? []}
           prev={prev}
           next={next}
         />
       </main>
     ) : (
       <main class="chapter-main">
-        <div class="content-header">
-          <div class="ch-eyebrow">{eyebrow}</div>
-          <h1 class="ch-title">{title}</h1>
-          {kind !== 'unit' && <div class="ch-meta">{metaLine}</div>}
-        </div>
-
-        {kind === 'unit' && (
-          <div class="chapter-body">
+        <PageShell
+          title={title}
+          eyebrow={eyebrow}
+          meta={kind === 'unit' ? undefined : metaLine}
+          tags={pageMod?.meta?.tags ?? []}
+          prev={prev}
+          next={next}
+          related={chapter?.related ?? []}
+          chrome={kind !== 'unit'}
+        >
+          {kind === 'unit' && (
             <div class="vn-list">
               {currentUnit?.chapters.map((c) => (
                 <a class="vn-row" href={c.href}>
@@ -146,28 +157,23 @@ else {
                 </a>
               ))}
             </div>
-          </div>
-        )}
+          )}
 
-        {kind === 'chapter' && (
-          <div class="chapter-body">
-            {bodyMd ? <Prose md={bodyMd} /> : <p class="vn-muted">Chapter content coming soon.</p>}
-            {solutionPages.length > 0 && (
+          {kind === 'chapter' && (
+            chapterPages.length > 0 ? (
               <div class="vn-list">
-                {solutionPages.map((n) => (
-                  <a class="vn-row" href={`${chapterBase}/solutions/${n}`}>
-                    <small>Solutions</small>
-                    <span>{pageTitle(n)}</span>
-                  </a>
+                {chapterPages.map((l) => (
+                  <a class="vn-row" href={l.href}><span>{l.label}</span></a>
                 ))}
               </div>
-            )}
-          </div>
-        )}
+            ) : <p class="vn-muted">Chapter content coming soon.</p>
+          )}
 
-        {kind === 'page' && (
-          <div class="chapter-body">{bodyMd ? <Prose md={bodyMd} /> : <p class="vn-muted">Content coming soon.</p>}</div>
-        )}
+          {pt === 'textbook' && <TextbookPage data={pageMod} />}
+          {pt === 'exam-notes' && <ExamNotesPage data={pageMod} />}
+          {pt === 'summary' && <SummaryPage data={pageMod} />}
+          {pt === 'animation' && <AnimationPage data={pageMod} />}
+        </PageShell>
       </main>
     )}
   </div>
@@ -177,11 +183,6 @@ else {
   .chapter-shell { display: flex; margin-top: 52px; min-height: calc(100vh - 52px); }
   .chapter-main { flex: 1; min-width: 0; padding: 32px 40px; }
   .chapter-main.flush { padding: 0; }
-  .content-header { padding-bottom: 24px; border-bottom: 1px solid var(--border); margin-bottom: 32px; }
-  .ch-eyebrow { font-family: var(--font-ui); font-size: 12px; color: var(--ink-muted); margin-bottom: 8px; }
-  .ch-title { font-size: 26px; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
-  .ch-meta { font-family: var(--font-ui); font-size: 13px; color: var(--ink-muted); }
-  .chapter-body { font-family: var(--font-body); }
   @media (max-width: 768px) {
     .chapter-shell { display: block; }
     .chapter-main { padding: 20px 16px; }

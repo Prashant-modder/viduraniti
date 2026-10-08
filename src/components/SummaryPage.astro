@@ -1,0 +1,77 @@
+---
+import Prose from './Prose.astro';
+
+interface Props { data: any }
+const { data } = Astro.props;
+const { summary, moral, quotes = [], mascot, extras = {} } = data ?? {};
+const first = quotes[0];
+const pose = mascot?.pose;
+---
+
+<div class="sm">
+  {summary && <Prose md={summary} />}
+
+  {moral && (
+    <section class="sm-block">
+      <h2 class="sm-heading">Moral</h2>
+      <p class="sm-moral">{moral}</p>
+    </section>
+  )}
+
+  {Object.entries(extras).map(([heading, items]: [string, any]) => (
+    <section class="sm-block">
+      <h2 class="sm-heading">{heading}</h2>
+      <ul class="sm-list">
+        {(items as any[]).map((i) => (
+          <li>{typeof i === 'string' ? i : <><b>{i.label}</b> {i.text}</>}</li>
+        ))}
+      </ul>
+    </section>
+  ))}
+
+  {(first || pose) && (
+    <div class="sm-corner">
+      {first && (
+        <blockquote class="sm-quote">
+          <p id="sm-quote-text">{first.text}</p>
+          <cite id="sm-quote-by">{first.by ? `— ${first.by}` : ''}</cite>
+        </blockquote>
+      )}
+      {pose && (
+        <img
+          class="sm-mascot"
+          src={`/assets/mascot/${pose}.png`}
+          alt=""
+          width="140"
+          height="140"
+          loading="lazy"
+          onerror="this.style.display='none'"
+        />
+      )}
+    </div>
+  )}
+</div>
+
+<script define:vars={{ quotes }}>
+  if (quotes.length > 1) {
+    const q = quotes[Math.floor(Math.random() * quotes.length)];
+    const t = document.getElementById('sm-quote-text');
+    const b = document.getElementById('sm-quote-by');
+    if (t) t.textContent = q.text;
+    if (b) b.textContent = q.by ? '— ' + q.by : '';
+  }
+</script>
+
+<style>
+  .sm { max-width: 68ch; }
+  .sm-block { margin-top: 32px; }
+  .sm-heading { font-family: var(--font-ui); font-size: 20px; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
+  .sm-moral { padding: 12px 16px; border-left: 3px solid var(--saffron); background: var(--saffron-light); border-radius: 0 8px 8px 0; }
+  .sm-list { margin-left: 22px; line-height: 1.7; }
+  .sm-corner { margin-top: 48px; display: flex; justify-content: flex-end; align-items: flex-end; gap: 16px; }
+  .sm-quote { max-width: 34ch; padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px 12px 4px 12px; background: var(--surface); font-style: italic; font-size: 15px; line-height: 1.55; }
+  .sm-quote cite { display: block; margin-top: 4px; font-family: var(--font-ui); font-size: 12px; font-style: normal; color: var(--ink-muted); }
+  .sm-quote cite:empty { display: none; }
+  .sm-mascot { width: 140px; height: 140px; object-fit: contain; flex-shrink: 0; }
+  @media (max-width: 480px) { .sm-corner { flex-direction: column; align-items: flex-end; } }
+</style>

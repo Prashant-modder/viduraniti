@@ -1,0 +1,67 @@
+---
+import Prose from './Prose.astro';
+
+interface Props { data: any }
+const { data } = Astro.props;
+const { originalUrl, intro, parts = [], characters = [], themes = [] } = data ?? {};
+---
+
+{originalUrl && (
+  <a class="tb-original" href={originalUrl} target="_blank" rel="noopener noreferrer">
+    Read the original chapter on NCERT ↗
+  </a>
+)}
+
+{intro && <Prose md={intro} />}
+
+{parts.map((p: any) => (
+  <section class="tb-part">
+    <h2 class="tb-heading">{p.heading}</h2>
+    {p.explain && <Prose md={p.explain} />}
+    {p.glossary?.length > 0 && (
+      <dl class="tb-gloss">
+        {p.glossary.map((g: any) => (
+          <div class="tb-gloss-row"><dt>{g.word}</dt><dd>{g.meaning}</dd></div>
+        ))}
+      </dl>
+    )}
+  </section>
+))}
+
+{characters.length > 0 && (
+  <section class="tb-part">
+    <h2 class="tb-heading">Characters</h2>
+    <div class="tb-chars">
+      {characters.map((c: any) => (
+        <div class="tb-char">
+          <div class="tb-char-name">{c.name}</div>
+          <div class="tb-char-traits">{(c.traits ?? []).join(', ')}</div>
+        </div>
+      ))}
+    </div>
+  </section>
+)}
+
+{themes.length > 0 && (
+  <section class="tb-part">
+    <h2 class="tb-heading">Themes</h2>
+    <ul class="tb-themes">{themes.map((t: string) => <li>{t}</li>)}</ul>
+  </section>
+)}
+
+<style>
+  .tb-original { display: inline-block; margin-bottom: 24px; font-family: var(--font-ui); font-size: 13px; font-weight: 500; color: var(--ink); text-decoration: none; padding: 7px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); transition: border-color .15s; }
+  .tb-original:hover { border-color: var(--saffron); }
+  .tb-part { margin-top: 36px; max-width: 68ch; }
+  .tb-heading { font-family: var(--font-ui); font-size: 20px; font-weight: 600; color: var(--ink); margin-bottom: 10px; }
+  .tb-gloss { margin-top: 14px; border-left: 3px solid var(--saffron); background: var(--saffron-light); border-radius: 0 8px 8px 0; padding: 10px 16px; font-family: var(--font-ui); font-size: 14px; line-height: 1.6; }
+  .tb-gloss-row { display: flex; gap: 10px; }
+  .tb-gloss dt { font-weight: 600; color: var(--ink); min-width: 96px; }
+  .tb-gloss dd { color: var(--ink-muted); }
+  .tb-chars { display: flex; flex-direction: column; gap: 8px; }
+  .tb-char { padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-family: var(--font-ui); }
+  .tb-char-name { font-size: 15px; font-weight: 600; color: var(--ink); }
+  .tb-char-traits { font-size: 13px; color: var(--ink-muted); margin-top: 2px; }
+  .tb-themes { margin-left: 22px; line-height: 1.7; }
+  @media (max-width: 480px) { .tb-gloss-row { flex-direction: column; gap: 0; } }
+</style>

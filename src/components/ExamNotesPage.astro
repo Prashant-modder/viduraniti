@@ -1,0 +1,92 @@
+---
+import Prose from './Prose.astro';
+
+interface Props { data: any }
+const { data } = Astro.props;
+const blocks: any[] = data?.blocks ?? [];
+---
+
+{blocks.map((b) => (
+  <section class="en-block">
+    {b.type === 'keypoints' && (
+      <>
+        <h2 class="en-heading">{b.title ?? 'Key points'}</h2>
+        <ul class="en-list">{b.items.map((i: string) => <li>{i}</li>)}</ul>
+      </>
+    )}
+
+    {b.type === 'vocab' && (
+      <>
+        <h2 class="en-heading">{b.title ?? 'Vocabulary'}</h2>
+        <div class="en-table-wrap">
+          <table class="en-table">
+            <thead><tr><th>Word</th><th>Meaning</th><th>Example</th></tr></thead>
+            <tbody>
+              {b.items.map((v: any) => (
+                <tr><td><b>{v.word}</b></td><td>{v.meaning}</td><td>{v.use}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </>
+    )}
+
+    {b.type === 'grammar' && (
+      <>
+        <h2 class="en-heading">{b.title ?? 'Grammar'}</h2>
+        {b.rule && <Prose md={b.rule} />}
+        {b.examples?.length > 0 && (
+          <ul class="en-list en-examples">{b.examples.map((e: string) => <li>{e}</li>)}</ul>
+        )}
+      </>
+    )}
+
+    {b.type === 'writing' && (
+      <>
+        <h2 class="en-heading">{b.title ?? b.format ?? 'Writing'}</h2>
+        <ul class="en-checks">{b.checklist.map((c: string) => <li>{c}</li>)}</ul>
+      </>
+    )}
+
+    {b.type === 'likely' && (
+      <>
+        <h2 class="en-heading">{b.title ?? 'Likely questions'}</h2>
+        <div class="en-qs">
+          {b.items.map((q: any) => (
+            <details class="en-q">
+              <summary>
+                <span>{q.q}</span>
+                {q.marks != null && <small>{q.marks} {q.marks === 1 ? 'mark' : 'marks'}</small>}
+              </summary>
+              <div class="en-a"><Prose md={q.a} /></div>
+            </details>
+          ))}
+        </div>
+      </>
+    )}
+  </section>
+))}
+
+{blocks.length === 0 && <p class="vn-muted">Exam notes coming soon.</p>}
+
+<style>
+  .en-block { margin-top: 36px; max-width: 68ch; }
+  .en-block:first-child { margin-top: 0; }
+  .en-heading { font-family: var(--font-ui); font-size: 20px; font-weight: 600; color: var(--ink); margin-bottom: 12px; }
+  .en-list { margin-left: 22px; line-height: 1.7; }
+  .en-list li { margin-bottom: 4px; }
+  .en-examples { font-style: italic; }
+  .en-checks { list-style: none; display: flex; flex-direction: column; gap: 6px; font-family: var(--font-ui); font-size: 15px; }
+  .en-checks li { padding-left: 26px; position: relative; }
+  .en-checks li::before { content: '✓'; position: absolute; left: 0; color: var(--green); font-weight: 700; }
+  .en-table-wrap { overflow-x: auto; }
+  .en-table { border-collapse: collapse; width: 100%; font-family: var(--font-ui); font-size: 14px; }
+  .en-table th, .en-table td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; vertical-align: top; }
+  .en-table th { background: var(--surface); }
+  .en-qs { display: flex; flex-direction: column; gap: 8px; }
+  .en-q { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+  .en-q summary { cursor: pointer; padding: 12px 16px; font-family: var(--font-ui); font-size: 15px; font-weight: 500; color: var(--ink); display: flex; justify-content: space-between; gap: 12px; align-items: baseline; list-style-position: inside; }
+  .en-q summary small { color: var(--ink-faint); font-size: 12px; white-space: nowrap; }
+  .en-q[open] { border-color: var(--saffron); }
+  .en-a { padding: 0 16px 12px; }
+</style>

@@ -9,9 +9,24 @@ export interface Route {
   path: string; unit: string; chapter: string; page: string;
 }
 
-const RESERVED = ['textbook', 'exam-notes', 'summary'];
+// Fixed page types, in sidebar / prev-next order. Solutions follow, then animations.
+export const RESERVED = ['textbook', 'exam-notes', 'summary'];
+export const ANIM = 'animations';
+
 const numOf = (s: string) => Number(s.replace(/\D/g, '')) || 0;
 export const prettify = (slug: string) => slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+// Pages with `meta.status = 'draft'` show in dev only. Missing status = published.
+const live = (m: any) => import.meta.env.DEV || m?.meta?.status !== 'draft';
+
+export function solutionKeys(pages: Record<string, any>): string[] {
+  return Object.keys(pages)
+    .filter((n) => !RESERVED.includes(n))
+    .sort(
+      (a, b) =>
+        (pages[a].meta?.order ?? 999) - (pages[b].meta?.order ?? 999) || a.localeCompare(b)
+    );
+}
 
 export function loadBook(cls: string, subject: string, bookSlug: string) {
   const prefix = `/src/data/${cls}/${subject}/${bookSlug}/`;
@@ -59,15 +74,24 @@ export function loadChapter(cls: string, subject: string, book: string, chapterP
   const prefix = `/src/data/${cls}/${subject}/${book}/${chapterPath}/`;
   let chapter: any = null;
   const pages: Record<string, any> = {};
+  const animations: Record<string, any> = {};
+
   for (const [p, m] of Object.entries(files)) {
     if (!p.startsWith(prefix)) continue;
-    const name = p.slice(prefix.length);
+    const name = p.slice(prefix.length).replace(/\.js$/, '');
+
+    if (name === 'index') { chapter = m.chapter ?? null; continue; }
+
+    if (name.startsWith(`${ANIM}/`)) {
+      const key = name.slice(ANIM.length + 1);
+      if (!key.includes('/') && live(m)) animations[key] = m;
+      continue;
+    }
+
     if (name.includes('/')) continue;
-    const key = name.replace(/\.js$/, '');
-    if (key === 'index') chapter = m.chapter ?? null;
-    else pages[key] = m;
+    if (live(m)) pages[name] = m;
   }
-  return { chapter, pages };
+  return { chapter, pages, animations };
 }
 
 export function loadUnit(cls: string, subject: string, book: string, unitSlug: string) {
@@ -76,12 +100,22 @@ export function loadUnit(cls: string, subject: string, book: string, unitSlug: s
 
 export function allRoutes(): Route[] {
   const out: Route[] = [];
-  for (const p of Object.keys(files)) {
+  for (const [p, m] of Object.entries(files)) {
     const [cls, subject, book, ...rest] = p.slice('/src/data/'.length).split('/');
     const file = rest.pop()!;
     const name = file.replace(/\.js$/, '');
     const last = rest[rest.length - 1] ?? '';
     const b = { cls, subject, book };
+
+    // /chapter/animations/{section}
+    if (last === ANIM && rest.length >= 2 && rest.length <= 3 && rest[rest.length - 2].startsWith('chapter-')) {
+      if (!live(m)) continue;
+      const chapter = rest[rest.length - 2];
+      const cpath = rest.slice(0, -1).join('/');
+      const unit = rest.length === 3 ? rest[0] : '';
+      out.push({ ...b, kind: 'page', path: `${cpath}/${ANIM}/${name}`, unit, chapter, page: `${ANIM}/${name}` });
+      continue;
+    }
 
     if (rest.length === 1 && last.startsWith('unit-') && name === 'index') {
       out.push({ ...b, kind: 'unit', path: last, unit: last, chapter: '', page: '' });
@@ -91,6 +125,7 @@ export function allRoutes(): Route[] {
       if (name === 'index') {
         out.push({ ...b, kind: 'chapter', path: cpath, unit, chapter: last, page: '' });
       } else {
+        if (!live(m)) continue;
         const path = RESERVED.includes(name) ? `${cpath}/${name}` : `${cpath}/solutions/${name}`;
         out.push({ ...b, kind: 'page', path, unit, chapter: last, page: name });
       }
