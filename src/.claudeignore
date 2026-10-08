@@ -6,6 +6,7 @@ bun.lockb
 cargo.lock
 Gemfile.lock
 poetry.lock
+viduraniti\src\data\sm1.pdf
 Pipfile.lock
 
 # Dependencies & Package Managers
