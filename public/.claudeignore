@@ -1,0 +1,48 @@
+# Dependency Lockfiles (The biggest token hogs)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+cargo.lock
+Gemfile.lock
+poetry.lock
+Pipfile.lock
+
+# Dependencies & Package Managers
+node_modules/
+bower_components/
+.pnpm-store/
+
+# Version Control & Git Internals
+.git/
+.gitignore
+.gitattributes
+.gitmodules
+
+# Build Outputs, Distribution, & Cache
+dist/
+build/
+out/
+.next/
+.nuxt/
+.cache/
+.npm/
+.eslintcache
+.parcel-cache/
+
+# Environment Variables & Secrets
+.env
+.env.*
+*.pem
+*.key
+
+# System & IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
