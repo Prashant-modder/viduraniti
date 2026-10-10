@@ -13,7 +13,16 @@ export interface Route {
 export const RESERVED = ['textbook', 'exam-notes', 'summary'];
 export const ANIM = 'animations';
 
-const numOf = (s: string) => Number(s.replace(/\D/g, '')) || 0;
+// Chapter groups. Folder name starts with one of these: unit-1, theme-a, project-2, section-b.
+const GROUP = /^(unit|theme|project|section)-/;
+
+// Sort key: digits if present (unit-3 -> 3), else trailing letter (theme-c -> 3).
+const orderOf = (s: string) => {
+  const d = s.replace(/\D/g, '');
+  if (d) return Number(d);
+  const m = s.match(/-([a-z])$/i);
+  return m ? m[1].toLowerCase().charCodeAt(0) - 96 : 0;
+};
 export const prettify = (slug: string) => slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 // Pages with `meta.status = 'draft'` show in dev only. Missing status = published.
@@ -45,16 +54,16 @@ export function loadBook(cls: string, subject: string, bookSlug: string) {
 
     if (parts.length === 1) {
       book = mod.book ?? null;
-    } else if (parts.length === 2 && parts[0].startsWith('unit-')) {
+    } else if (parts.length === 2 && GROUP.test(parts[0])) {
       unit(parts[0]).label = mod.unit?.label ?? null;
     } else if (parts.length === 2 && parts[0].startsWith('chapter-')) {
       const c = mod.chapter;
-      unit('').chapters.push({ title: c.title, abs: c.abs, href: `${base}/chapter-${c.abs}` });
+      unit('').chapters.push({ title: c.title, abs: c.abs, href: `${base}/${parts[0]}` });
     } else if (parts.length === 3) {
       const c = mod.chapter;
       unit(parts[0]).chapters.push({
         title: c.title, abs: c.abs, pos: c.pos,
-        href: `${base}/${parts[0]}/chapter-${c.abs}-${c.pos}`,
+        href: `${base}/${parts[0]}/${parts[1]}`,
       });
     }
   }
@@ -65,7 +74,7 @@ export function loadBook(cls: string, subject: string, bookSlug: string) {
       label: u.slug ? (u.label ?? prettify(u.slug)) : null,
       chapters: u.chapters.sort((a, b) => a.abs - b.abs),
     }))
-    .sort((a, b) => numOf(a.slug) - numOf(b.slug));
+    .sort((a, b) => orderOf(a.slug) - orderOf(b.slug));
 
   return { book, units: list };
 }
@@ -117,7 +126,7 @@ export function allRoutes(): Route[] {
       continue;
     }
 
-    if (rest.length === 1 && last.startsWith('unit-') && name === 'index') {
+    if (rest.length === 1 && GROUP.test(last) && name === 'index') {
       out.push({ ...b, kind: 'unit', path: last, unit: last, chapter: '', page: '' });
     } else if (last.startsWith('chapter-') && rest.length <= 2) {
       const unit = rest.length === 2 ? rest[0] : '';

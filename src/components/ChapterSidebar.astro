@@ -18,7 +18,9 @@ interface Props {
 
 const { bookTitle, bookSlug, bookSub, classNum, subject, units, mode, activeUnit, activeChapter, pageLinks = [] } = Astro.props;
 const base = `/ncert/class-${classNum}/subject:${subject}/${bookSlug}`;
-const keyOf = (c: Chapter) => `chapter-${c.abs}${c.pos ? '-' + c.pos : ''}`;
+// Folder name is the key: chapter-1-1, chapter-a-1, chapter-8.
+const keyOf = (c: Chapter) => c.href.split('/').pop()!;
+const codeOf = (c: Chapter) => keyOf(c).replace('chapter-', '').toUpperCase();
 ---
 
 <aside class="sidebar">
@@ -41,7 +43,7 @@ const keyOf = (c: Chapter) => `chapter-${c.abs}${c.pos ? '-' + c.pos : ''}`;
         {u.chapters.map((c) => (
           <>
             <a href={c.href} class={activeChapter === keyOf(c) ? 'active' : ''}>
-              Ch {c.abs}{c.pos ? `-${c.pos}` : ''} · {c.title}
+              Ch {codeOf(c)} · {c.title}
             </a>
             {activeChapter === keyOf(c) && pageLinks.length > 0 && (
               <div class="sidebar-page-links">

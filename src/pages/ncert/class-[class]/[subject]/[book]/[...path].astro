@@ -69,7 +69,9 @@ const title =
   : (pageMod?.meta?.title ?? prettify(isAnim ? animKey : page));
 
 // prev / next: pages within the chapter, then neighbouring chapters
-const chLabel = (c: any) => `Ch ${c.abs}${c.pos ? '-' + c.pos : ''} · ${c.title}`;
+// Chapter code comes from the folder name: chapter-1-1 -> 1-1, chapter-a-1 -> A-1.
+const chCode = (c: any) => c.href.split('/').pop()!.replace('chapter-', '').toUpperCase();
+const chLabel = (c: any) => `Ch ${chCode(c)} · ${c.title}`;
 const flat = units.flatMap((u) => u.chapters);
 const idx = flat.findIndex((c) => c.href === chapterBase);
 const pi = chapterPages.findIndex((l) => l.key === page);
@@ -152,7 +154,7 @@ else {
             <div class="vn-list">
               {currentUnit?.chapters.map((c) => (
                 <a class="vn-row" href={c.href}>
-                  <small>Ch {c.abs}{c.pos ? `-${c.pos}` : ''}</small>
+                  <small>Ch {chCode(c)}</small>
                   <span>{c.title}</span>
                 </a>
               ))}
