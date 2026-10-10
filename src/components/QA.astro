@@ -69,7 +69,7 @@ const tableAnswer = t === 'table' && Array.isArray(answer) ? (answer as unknown 
   )}
 
   {options.length > 0 && (
-    <ul class="q-options">{options.map((o) => <li set:html={renderInline(o)} />)}</ul>
+    <ul class="q-options">{options.map((o: string) => <li set:html={renderInline(o)} />)}</ul>
   )}
 
   {t === 'match' && <Match mode="prompt" left={left} right={right} />}
