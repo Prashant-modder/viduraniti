@@ -2,7 +2,9 @@
 import 'katex/dist/katex.min.css';
 import Prose from './Prose.astro';
 import Match from './qa/Match.astro';
+import Figure from './qa/Figure.astro';
 import Order from './qa/Order.astro';
+import Table from './qa/Table.astro';
 import WordBox from './qa/WordBox.astro';
 import { renderInline } from '@/lib/md';
 
@@ -13,11 +15,14 @@ import { renderInline } from '@/lib/md';
   blanks                                answer: string[], one entry per numbered blank
   match                                 left[], right[]; answer: string[] of Column 2 letters in Column 1 order
   order                                 items[]; answer: number[] of item numbers in correct order
+  table                                 columns[], rows[][] (blank cells contain ______); answer: string[][] = the full filled grid
+  Any type may also carry `figure` (shown with the question) and `answerFigure` (shown in the answer): { svg, alt, caption? }
   If `type` is omitted: options present -> mcq, otherwise short.
 */
+interface FigureData { svg: string; alt: string; caption?: string }
 interface Props {
   label?: string;
-  type?: 'short' | 'long' | 'mcq' | 'fill' | 'rectify' | 'activity' | 'blanks' | 'match' | 'order';
+  type?: 'short' | 'long' | 'mcq' | 'fill' | 'rectify' | 'activity' | 'blanks' | 'match' | 'order' | 'table';
   question?: string;
   options?: string[];
   wordBox?: string[];
@@ -25,9 +30,16 @@ interface Props {
   left?: string[];
   right?: string[];
   items?: string[];
-  answer?: string | string[] | number[];
+  columns?: string[];
+  rows?: string[][];
+  figure?: FigureData;
+  answerFigure?: FigureData;
+  answer?: string | string[] | number[] | string[][];
 }
-const { label, type, question, options = [], wordBox = [], example, left = [], right = [], items = [], answer } = Astro.props;
+const {
+  label, type, question, options = [], wordBox = [], example,
+  left = [], right = [], items = [], columns = [], rows = [], figure, answerFigure, answer,
+} = Astro.props;
 
 const t = type ?? (options.length ? 'mcq' : 'short');
 const isActivity = t === 'activity';
@@ -36,7 +48,8 @@ const hasAnswer = Array.isArray(answer) ? answer.length > 0 : !!answer;
 const asStrings = (a: unknown): string[] => (Array.isArray(a) ? a.map(String) : a ? [String(a)] : []);
 const textAnswer = asStrings(answer).filter(Boolean).join('\n\n');
 const listAnswer = asStrings(answer);
-const orderAnswer = Array.isArray(answer) ? answer.map(Number) : [];
+const orderAnswer = Array.isArray(answer) ? (answer as unknown[]).map(Number) : [];
+const tableAnswer = t === 'table' && Array.isArray(answer) ? (answer as unknown as string[][]) : [];
 ---
 
 <div class="qa">
@@ -46,6 +59,8 @@ const orderAnswer = Array.isArray(answer) ? answer.map(Number) : [];
       {question && <span set:html={renderInline(question)} />}
     </div>
   )}
+
+  {figure && <Figure svg={figure.svg} alt={figure.alt} caption={figure.caption} />}
 
   <WordBox words={wordBox} />
 
@@ -59,6 +74,7 @@ const orderAnswer = Array.isArray(answer) ? answer.map(Number) : [];
 
   {t === 'match' && <Match mode="prompt" left={left} right={right} />}
   {t === 'order' && <Order mode="prompt" items={items} />}
+  {t === 'table' && <Table mode="prompt" columns={columns} rows={rows} />}
 
   <div class="answer-label">{isActivity ? 'Sample answer' : 'Answer'}</div>
   <div class="answer-text">
@@ -70,9 +86,12 @@ const orderAnswer = Array.isArray(answer) ? answer.map(Number) : [];
       <Match mode="answer" left={left} right={right} answer={listAnswer} />
     ) : t === 'order' ? (
       <Order mode="answer" items={items} answer={orderAnswer} />
+    ) : t === 'table' ? (
+      <Table mode="answer" columns={columns} rows={rows} answer={tableAnswer} />
     ) : (
       <Prose md={textAnswer} />
     )}
+    {answerFigure && <Figure svg={answerFigure.svg} alt={answerFigure.alt} caption={answerFigure.caption} />}
   </div>
 
   <div class="answer-actions">

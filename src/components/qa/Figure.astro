@@ -1,0 +1,29 @@
+---
+// An inline SVG figure for a question or its answer.
+// `svg` is a complete <svg> string from the data files (trusted content, not user input).
+// Colour with the shared classes below so figures follow light/dark mode:
+//   fg-ink, fg-muted, fg-accent (saffron), fg-green, fg-white, fg-bg  (fills)
+//   fg-line, fg-line-accent                                          (strokes, no fill)
+interface Props { svg: string; alt: string; caption?: string }
+const { svg, alt, caption } = Astro.props;
+---
+
+<figure class="fig" role="img" aria-label={alt}>
+  <div class="fig-art" set:html={svg} />
+  {caption && <figcaption class="fig-cap">{caption}</figcaption>}
+</figure>
+
+<style>
+  .fig { max-width: 68ch; margin: 4px 0 16px; }
+  .fig-art { max-width: 420px; }
+  .fig-art :global(svg) { display: block; width: 100%; height: auto; }
+  .fig-art :global(.fg-ink) { fill: var(--ink); }
+  .fig-art :global(.fg-muted) { fill: var(--ink-muted); }
+  .fig-art :global(.fg-accent) { fill: var(--saffron); }
+  .fig-art :global(.fg-green) { fill: var(--green); }
+  .fig-art :global(.fg-white) { fill: #fff; }
+  .fig-art :global(.fg-bg) { fill: var(--bg); }
+  .fig-art :global(.fg-line) { fill: none; stroke: var(--ink); stroke-width: 1.5; }
+  .fig-art :global(.fg-line-accent) { fill: none; stroke: var(--saffron); stroke-width: 1.5; }
+  .fig-cap { margin-top: 6px; font-family: var(--font-ui); font-size: 13px; color: var(--ink-muted); }
+</style>

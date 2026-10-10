@@ -1,0 +1,48 @@
+---
+import { renderInline } from '@/lib/md';
+
+// A fill-in table.
+// mode "prompt": the table as printed. Any cell containing ______ is a blank to fill in.
+// mode "answer": the completed table; cells that were blank in the prompt are highlighted.
+// `rows` is the printed table (blanks included); `answer` is the same grid fully filled in.
+interface Props {
+  mode: 'prompt' | 'answer';
+  columns: string[];
+  rows: string[][];
+  answer?: string[][];
+}
+const { mode, columns, rows, answer = [] } = Astro.props;
+
+const isBlank = (c: unknown) => /_{3,}/.test(String(c ?? ''));
+const shown = mode === 'answer' && answer.length > 0 ? answer : rows;
+---
+
+<div class="tbl-wrap">
+  <table class="tbl">
+    <thead>
+      <tr>{columns.map((c) => <th set:html={renderInline(c)} />)}</tr>
+    </thead>
+    <tbody>
+      {shown.map((row, i) => (
+        <tr>
+          {row.map((cell, j) => (
+            <td
+              class={mode === 'answer' && isBlank(rows[i]?.[j]) ? 'fill' : undefined}
+              set:html={renderInline(String(cell ?? ''))}
+            />
+          ))}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+
+<style>
+  .tbl-wrap { max-width: 68ch; margin: 4px 0 16px; overflow-x: auto; }
+  .tbl { border-collapse: collapse; width: 100%; font-family: var(--font-ui); font-size: 14px; line-height: 1.5; }
+  .tbl th, .tbl td { border: 1px solid var(--border); padding: 6px 12px; text-align: left; vertical-align: top; }
+  .tbl th { background: var(--surface); color: var(--ink-muted); font-weight: 600; font-size: 12px; }
+  .tbl td.fill { background: var(--green-light); color: var(--green); font-weight: 500; }
+  .tbl td :global(.blank) { display: inline-block; min-width: 4ch; border-bottom: 1.5px solid var(--ink-muted); margin: 0 2px; transform: translateY(2px); }
+  @media (max-width: 480px) { .tbl th, .tbl td { padding: 5px 8px; font-size: 13px; } }
+</style>

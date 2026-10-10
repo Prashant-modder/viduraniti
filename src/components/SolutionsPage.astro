@@ -4,8 +4,10 @@ import Prose from './Prose.astro';
 import WordBox from './qa/WordBox.astro';
 import { renderMd } from '@/lib/md';
 
-type QType = 'short' | 'long' | 'mcq' | 'fill' | 'rectify' | 'activity' | 'blanks' | 'match' | 'order';
-type Answer = string | string[] | number[];
+type QType = 'short' | 'long' | 'mcq' | 'fill' | 'rectify' | 'activity' | 'blanks' | 'match' | 'order' | 'table';
+type Answer = string | string[] | number[] | string[][];
+
+interface FigureData { svg: string; alt: string; caption?: string }
 
 // A question or a labelled sub-part. Which fields apply depends on `type` (see QA.astro).
 interface Q {
@@ -17,6 +19,10 @@ interface Q {
   left?: string[];
   right?: string[];
   items?: string[];
+  columns?: string[];
+  rows?: string[][];
+  figure?: FigureData;        // SVG shown with the question
+  answerFigure?: FigureData;  // SVG shown in the answer
   answer?: Answer;
 }
 interface Part extends Q { label: string }
@@ -100,6 +106,10 @@ const passageHtml = (p: string) => renderMd(p);
                 left={p.left}
                 right={p.right}
                 items={p.items}
+                columns={p.columns}
+                rows={p.rows}
+                figure={p.figure}
+                answerFigure={p.answerFigure}
                 answer={p.answer}
               />
             ))
@@ -114,6 +124,10 @@ const passageHtml = (p: string) => renderMd(p);
                 left={it.left}
                 right={it.right}
                 items={it.items}
+                columns={it.columns}
+                rows={it.rows}
+                figure={it.figure}
+                answerFigure={it.answerFigure}
                 answer={it.answer}
               />
             </>
