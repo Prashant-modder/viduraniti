@@ -14,13 +14,12 @@ interface Props {
   activeUnit?: string;
   activeChapter?: string;
   pageLinks?: PageLink[];
+  bookLinks?: PageLink[];
 }
 
-const { bookTitle, bookSlug, bookSub, classNum, subject, units, mode, activeUnit, activeChapter, pageLinks = [] } = Astro.props;
+const { bookTitle, bookSlug, bookSub, classNum, subject, units, mode, activeUnit, activeChapter, pageLinks = [], bookLinks = [] } = Astro.props;
 const base = `/ncert/class-${classNum}/subject:${subject}/${bookSlug}`;
-// Folder name is the key: chapter-1-1, chapter-a-1, chapter-8.
-const keyOf = (c: Chapter) => c.href.split('/').pop()!;
-const codeOf = (c: Chapter) => keyOf(c).replace('chapter-', '').toUpperCase();
+const keyOf = (c: Chapter) => `chapter-${c.abs}${c.pos ? '-' + c.pos : ''}`;
 ---
 
 <aside class="sidebar">
@@ -30,10 +29,18 @@ const codeOf = (c: Chapter) => keyOf(c).replace('chapter-', '').toUpperCase();
     <div class="sidebar-book-sub">{bookSub}</div>
   </div>
 
+  {bookLinks.length > 0 && (
+    <div class="sidebar-book-links">
+      {bookLinks.map((l) => (
+        <a href={l.href} class={l.active ? 'active-page' : ''}>{l.label}</a>
+      ))}
+    </div>
+  )}
+
   {units.map((u) => (
     <div class="sidebar-unit">
       <div class="sidebar-unit-label">
-        {mode === 'unit' ? (
+        {mode === 'unit' && u.slug ? (
           <a href={`${base}/${u.slug}`} class={activeUnit === u.slug ? 'active-unit' : ''}>{u.label}</a>
         ) : (
           u.label
@@ -43,7 +50,7 @@ const codeOf = (c: Chapter) => keyOf(c).replace('chapter-', '').toUpperCase();
         {u.chapters.map((c) => (
           <>
             <a href={c.href} class={activeChapter === keyOf(c) ? 'active' : ''}>
-              Ch {codeOf(c)} · {c.title}
+              Ch {c.abs}{c.pos ? `-${c.pos}` : ''} · {c.title}
             </a>
             {activeChapter === keyOf(c) && pageLinks.length > 0 && (
               <div class="sidebar-page-links">
@@ -69,6 +76,13 @@ const codeOf = (c: Chapter) => keyOf(c).replace('chapter-', '').toUpperCase();
   .sidebar-book-label { font-family: var(--font-ui); font-size: 11px; color: var(--ink-faint); margin-bottom: 4px; }
   .sidebar-book-title { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--ink); }
   .sidebar-book-sub { font-family: var(--font-ui); font-size: 12px; color: var(--ink-muted); }
+  .sidebar-book-links { padding: 4px 16px 8px; display: flex; flex-direction: column; gap: 1px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+  .sidebar-book-links a {
+    font-family: var(--font-ui); font-size: 12px; color: var(--ink-muted);
+    text-decoration: none; padding: 3px 8px; border-radius: 4px;
+  }
+  .sidebar-book-links a:hover { background: var(--surface); color: var(--ink); }
+  .sidebar-book-links a.active-page { color: var(--saffron); background: var(--saffron-light); font-weight: 500; }
   .sidebar-unit { margin-bottom: 4px; }
   .sidebar-unit-label {
     font-family: var(--font-ui); font-size: 11px; font-weight: 600;

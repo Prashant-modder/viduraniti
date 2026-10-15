@@ -5,24 +5,25 @@ export interface Chapter { title: string; abs: number; pos?: number; href: strin
 export interface Unit { slug: string; label: string | null; chapters: Chapter[] }
 export interface Route {
   cls: string; subject: string; book: string;
-  kind: 'unit' | 'chapter' | 'page';
+  kind: 'unit' | 'chapter' | 'page' | 'book';
   path: string; unit: string; chapter: string; page: string;
 }
 
-// Fixed page types, in sidebar / prev-next order. Solutions follow, then animations.
-export const RESERVED = ['textbook', 'exam-notes', 'summary'];
-export const ANIM = 'animations';
+// Fixed page types at chapter root, in sidebar / prev-next order. Solutions follow, then collections.
+export const RESERVED = ['textbook', 'exam-notes', 'summary', 'big-questions', 'glossary'];
 
-// Chapter groups. Folder name starts with one of these: unit-1, theme-a, project-2, section-b.
-const GROUP = /^(unit|theme|project|section)-/;
-
-// Sort key: digits if present (unit-3 -> 3), else trailing letter (theme-c -> 3).
-const orderOf = (s: string) => {
-  const d = s.replace(/\D/g, '');
-  if (d) return Number(d);
-  const m = s.match(/-([a-z])$/i);
-  return m ? m[1].toLowerCase().charCodeAt(0) - 96 : 0;
+// Sub-folders of a chapter. URL: {chapter}/{folder}/{name}
+export const COLLECTIONS: Record<string, { type: string; label: string }> = {
+  animations: { type: 'animation', label: 'Animation' },
+  timelines: { type: 'timeline', label: 'Timeline' },
+  charts: { type: 'chart', label: 'Chart' },
+  maps: { type: 'map', label: 'Map' },
 };
+
+// Pages that live at book level. URL: {book}/{name}
+export const BOOK_PAGES = ['glossary'];
+
+const numOf = (s: string) => Number(s.replace(/\D/g, '')) || 0;
 export const prettify = (slug: string) => slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 // Pages with `meta.status = 'draft'` show in dev only. Missing status = published.
@@ -54,16 +55,16 @@ export function loadBook(cls: string, subject: string, bookSlug: string) {
 
     if (parts.length === 1) {
       book = mod.book ?? null;
-    } else if (parts.length === 2 && GROUP.test(parts[0])) {
+    } else if (parts.length === 2 && parts[0].startsWith('unit-')) {
       unit(parts[0]).label = mod.unit?.label ?? null;
     } else if (parts.length === 2 && parts[0].startsWith('chapter-')) {
       const c = mod.chapter;
-      unit('').chapters.push({ title: c.title, abs: c.abs, href: `${base}/${parts[0]}` });
+      unit('').chapters.push({ title: c.title, abs: c.abs, href: `${base}/chapter-${c.abs}` });
     } else if (parts.length === 3) {
       const c = mod.chapter;
       unit(parts[0]).chapters.push({
         title: c.title, abs: c.abs, pos: c.pos,
-        href: `${base}/${parts[0]}/${parts[1]}`,
+        href: `${base}/${parts[0]}/chapter-${c.abs}-${c.pos}`,
       });
     }
   }
@@ -74,16 +75,20 @@ export function loadBook(cls: string, subject: string, bookSlug: string) {
       label: u.slug ? (u.label ?? prettify(u.slug)) : null,
       chapters: u.chapters.sort((a, b) => a.abs - b.abs),
     }))
-    .sort((a, b) => orderOf(a.slug) - orderOf(b.slug));
+    .sort((a, b) => numOf(a.slug) - numOf(b.slug));
 
-  return { book, units: list };
+  const g = files[`${prefix}glossary.js`];
+  const glossary = g && live(g) ? g : null;
+
+  return { book, units: list, glossary };
 }
 
 export function loadChapter(cls: string, subject: string, book: string, chapterPath: string) {
   const prefix = `/src/data/${cls}/${subject}/${book}/${chapterPath}/`;
   let chapter: any = null;
   const pages: Record<string, any> = {};
-  const animations: Record<string, any> = {};
+  const collections: Record<string, Record<string, any>> = {};
+  for (const k of Object.keys(COLLECTIONS)) collections[k] = {};
 
   for (const [p, m] of Object.entries(files)) {
     if (!p.startsWith(prefix)) continue;
@@ -91,16 +96,17 @@ export function loadChapter(cls: string, subject: string, book: string, chapterP
 
     if (name === 'index') { chapter = m.chapter ?? null; continue; }
 
-    if (name.startsWith(`${ANIM}/`)) {
-      const key = name.slice(ANIM.length + 1);
-      if (!key.includes('/') && live(m)) animations[key] = m;
+    const slash = name.indexOf('/');
+    if (slash > 0) {
+      const coll = name.slice(0, slash);
+      const key = name.slice(slash + 1);
+      if (coll in COLLECTIONS && !key.includes('/') && live(m)) collections[coll][key] = m;
       continue;
     }
 
-    if (name.includes('/')) continue;
     if (live(m)) pages[name] = m;
   }
-  return { chapter, pages, animations };
+  return { chapter, pages, collections };
 }
 
 export function loadUnit(cls: string, subject: string, book: string, unitSlug: string) {
@@ -116,17 +122,29 @@ export function allRoutes(): Route[] {
     const last = rest[rest.length - 1] ?? '';
     const b = { cls, subject, book };
 
-    // /chapter/animations/{section}
-    if (last === ANIM && rest.length >= 2 && rest.length <= 3 && rest[rest.length - 2].startsWith('chapter-')) {
+    // book-level pages
+    if (rest.length === 0) {
+      if (BOOK_PAGES.includes(name) && live(m)) {
+        out.push({ ...b, kind: 'book', path: name, unit: '', chapter: '', page: name });
+      }
+      continue;
+    }
+
+    // /chapter/{collection}/{name}
+    if (
+      last in COLLECTIONS &&
+      rest.length >= 2 && rest.length <= 3 &&
+      rest[rest.length - 2].startsWith('chapter-')
+    ) {
       if (!live(m)) continue;
       const chapter = rest[rest.length - 2];
       const cpath = rest.slice(0, -1).join('/');
       const unit = rest.length === 3 ? rest[0] : '';
-      out.push({ ...b, kind: 'page', path: `${cpath}/${ANIM}/${name}`, unit, chapter, page: `${ANIM}/${name}` });
+      out.push({ ...b, kind: 'page', path: `${cpath}/${last}/${name}`, unit, chapter, page: `${last}/${name}` });
       continue;
     }
 
-    if (rest.length === 1 && GROUP.test(last) && name === 'index') {
+    if (rest.length === 1 && last.startsWith('unit-') && name === 'index') {
       out.push({ ...b, kind: 'unit', path: last, unit: last, chapter: '', page: '' });
     } else if (last.startsWith('chapter-') && rest.length <= 2) {
       const unit = rest.length === 2 ? rest[0] : '';
