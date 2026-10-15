@@ -1,0 +1,189 @@
+---
+// src/components/VisualPage.astro
+import Prose from './Prose.astro';
+import { renderInline } from '@/lib/md';
+
+/*
+  One component for the three data-set pages. `kind` decides what is drawn.
+  Every data file exports `meta` ({ title, status?, tags? }) and optionally `intro` (Markdown).
+
+  timeline  export const events = [{ date, end?, title, text?, era? }]
+            (shown in the order given, so BCE dates work; `end` makes a range like 1682–1707;
+             a heading appears when `era` changes)
+
+  chart     export const chart = one of:
+              { type: 'bar', unit?, labels: [...], series: [{ name?, values: [...] }] }
+              { type: 'dynasty', rulers: [{ name, years?, note?, children?: [...] }] }   (generation chart)
+              { type: 'hub', center: { title, note? }, spokes: [{ title, note? }] }       (council / hub-and-spoke diagram)
+
+  map       export const description = "..."; export const places = [{ name, kind?, note?, lat?, lng? }]
+            kind: region | hill-fort | coastal-fort | land-fort | port | city | foreign (grouped like a legend).
+            lat/lng are kept for the later vector map engine. For now this page lists the places.
+*/
+interface Props { data: any; kind: 'map' | 'timeline' | 'chart' }
+const { data, kind } = Astro.props;
+const intro: string | undefined = data?.intro;
+
+const events: any[] = data?.events ?? [];
+
+const chart = data?.chart ?? {};
+const labels: string[] = chart.labels ?? [];
+const series: any[] = chart.series ?? [];
+const unit: string = chart.unit ?? '';
+const max = Math.max(...series.flatMap((s) => (s.values ?? []).map(Number)), 1);
+const width = (v: number) => `${Math.max(2, Math.round((Number(v) / max) * 100))}%`;
+
+const rulers: { name: string; years?: string; note?: string; depth: number }[] = [];
+const walk = (list: any[], depth: number) => {
+  for (const r of list) {
+    rulers.push({ name: r.name, years: r.years, note: r.note, depth });
+    if (r.children?.length) walk(r.children, depth + 1);
+  }
+};
+walk(chart.rulers ?? [], 0);
+
+const places: any[] = data?.places ?? [];
+const KIND_LABEL: Record<string, string> = {
+  region: 'Territories', 'hill-fort': 'Hill forts', 'coastal-fort': 'Coastal forts', 'land-fort': 'Land forts',
+  port: 'Ports', city: 'Cities', foreign: 'Foreign powers',
+};
+const groups = new Map<string, any[]>();
+for (const p of places) {
+  const label = KIND_LABEL[p.kind] ?? 'Places';
+  groups.set(label, [...(groups.get(label) ?? []), p]);
+}
+---
+
+{intro && <Prose md={intro} />}
+
+{kind === 'timeline' && (
+  events.length > 0 ? (
+    <ol class="tl">
+      {events.map((e, i) => (
+        <>
+          {e.era && e.era !== events[i - 1]?.era && <li class="tl-era">{e.era}</li>}
+          <li class="tl-item">
+            <div class="tl-date">{e.end ? `${e.date}–${e.end}` : e.date}</div>
+            <div class="tl-body">
+              <div class="tl-title" set:html={renderInline(e.title)} />
+              {e.text && <div class="tl-text" set:html={renderInline(e.text)} />}
+            </div>
+          </li>
+        </>
+      ))}
+    </ol>
+  ) : <p class="vn-muted">Timeline coming soon.</p>
+)}
+
+{kind === 'chart' && chart.type === 'bar' && (
+  <div class="ch">
+    {labels.map((label, i) => (
+      <div class="ch-group">
+        <div class="ch-label">{label}</div>
+        {series.map((s, k) => (
+          <div class="ch-row">
+            {series.length > 1 && <span class="ch-sname">{s.name}</span>}
+            <span class="ch-bar"><i class={`s${k % 3}`} style={`width:${width(s.values?.[i] ?? 0)}`}></i></span>
+            <span class="ch-val">{s.values?.[i]}{unit}</span>
+          </div>
+        ))}
+      </div>
+    ))}
+  </div>
+)}
+
+{kind === 'chart' && chart.type === 'dynasty' && (
+  <div class="gn">
+    {rulers.map((r) => (
+      <div class="gn-node" style={`--d:${r.depth}`}>
+        <div class="gn-name">{r.name}{r.years && <small>{r.years}</small>}</div>
+        {r.note && <div class="gn-note" set:html={renderInline(r.note)} />}
+      </div>
+    ))}
+  </div>
+)}
+
+{kind === 'chart' && chart.type === 'hub' && (
+  <div class="hub">
+    <div class="hub-center">
+      <div class="hub-title">{chart.center?.title}</div>
+      {chart.center?.note && <div class="hub-note">{chart.center.note}</div>}
+    </div>
+    <div class="hub-line"></div>
+    <div class="hub-grid">
+      {(chart.spokes ?? []).map((sp: any) => (
+        <div class="hub-spoke">
+          <div class="hub-title">{sp.title}</div>
+          {sp.note && <div class="hub-note">{sp.note}</div>}
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
+{kind === 'chart' && !['bar', 'dynasty', 'hub'].includes(chart.type) && <p class="vn-muted">Chart coming soon.</p>}
+
+{kind === 'map' && (
+  <>
+    <div class="mp-soon">
+      <p class="mp-soon-title">Interactive map coming soon</p>
+      {data?.description && <p class="mp-soon-text">{data.description}</p>}
+    </div>
+    {[...groups].map(([label, items]) => (
+      <section class="mp-group">
+        <h2 class="mp-group-title">{label}</h2>
+        <ul class="mp-places">
+          {items.map((p) => (
+            <li><b>{p.name}</b>{p.note && <span> {p.note}</span>}</li>
+          ))}
+        </ul>
+      </section>
+    ))}
+  </>
+)}
+
+<style>
+  .tl { list-style: none; max-width: 68ch; margin-top: 8px; padding-left: 4px; border-left: 2px solid var(--border); margin-left: 6px; }
+  .tl-era { margin: 28px 0 10px -4px; padding-left: 14px; font-family: var(--font-ui); font-size: 18px; font-weight: 600; color: var(--ink); }
+  .tl-item { position: relative; display: grid; grid-template-columns: 110px 1fr; gap: 14px; padding: 10px 0 10px 18px; }
+  .tl-item::before { content: ''; position: absolute; left: -9px; top: 17px; width: 10px; height: 10px; border-radius: 50%; background: var(--saffron); }
+  .tl-date { font-family: var(--font-ui); font-size: 14px; font-weight: 600; color: var(--saffron); }
+  .tl-title { font-family: var(--font-ui); font-size: 16px; font-weight: 600; color: var(--ink); }
+  .tl-text { font-size: 15px; line-height: 1.6; color: var(--ink-muted); margin-top: 2px; }
+
+  .ch { max-width: 68ch; display: flex; flex-direction: column; gap: 14px; font-family: var(--font-ui); }
+  .ch-label { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+  .ch-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-bottom: 3px; }
+  .ch-row:not(:has(.ch-sname)) { grid-template-columns: 1fr auto; }
+  .ch-sname { font-size: 12px; color: var(--ink-muted); min-width: 70px; }
+  .ch-bar { display: block; background: var(--surface-2); border-radius: 4px; height: 14px; overflow: hidden; }
+  .ch-bar i { display: block; height: 100%; border-radius: 4px; }
+  .ch-bar .s0 { background: var(--saffron); }
+  .ch-bar .s1 { background: var(--green); }
+  .ch-bar .s2 { background: var(--ink-muted); }
+  .ch-val { font-size: 13px; color: var(--ink); min-width: 48px; text-align: right; }
+
+  .gn { max-width: 68ch; display: flex; flex-direction: column; gap: 6px; }
+  .gn-node { margin-left: calc(var(--d) * 24px); padding: 8px 14px; border: 1px solid var(--border); border-left: 3px solid var(--saffron); border-radius: 0 8px 8px 0; background: var(--surface); font-family: var(--font-ui); }
+  .gn-name { font-size: 15px; font-weight: 600; color: var(--ink); display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .gn-name small { font-size: 12px; font-weight: 400; color: var(--ink-muted); }
+  .gn-note { font-size: 13px; color: var(--ink-muted); margin-top: 2px; }
+
+  .mp-soon { padding: 40px 24px; border: 1px dashed var(--border); border-radius: 12px; background: var(--surface); text-align: center; font-family: var(--font-ui); max-width: 68ch; }
+  .mp-soon-title { font-size: 16px; font-weight: 600; color: var(--ink); }
+  .mp-soon-text { margin-top: 6px; font-size: 14px; color: var(--ink-muted); }
+  .mp-group { max-width: 68ch; margin-top: 24px; }
+  .mp-group-title { font-family: var(--font-ui); font-size: 16px; font-weight: 600; color: var(--ink); }
+  .mp-places { margin: 6px 0 0 22px; line-height: 1.7; font-size: 15px; }
+  .mp-places span { color: var(--ink-muted); }
+
+  .hub { max-width: 68ch; display: flex; flex-direction: column; align-items: center; font-family: var(--font-ui); }
+  .hub-center { padding: 14px 28px; border: 2px solid var(--saffron); border-radius: 999px; background: var(--saffron-light); text-align: center; }
+  .hub-line { width: 2px; height: 20px; background: var(--border); }
+  .hub-grid { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; padding-top: 12px; border-top: 2px solid var(--border); }
+  .hub-spoke { padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); text-align: center; }
+  .hub-title { font-size: 15px; font-weight: 600; color: var(--ink); }
+  .hub-note { font-size: 13px; color: var(--ink-muted); margin-top: 2px; }
+
+  @media (max-width: 480px) { .tl-item { grid-template-columns: 1fr; gap: 2px; } .gn-node { margin-left: calc(var(--d) * 14px); } }
+</style>

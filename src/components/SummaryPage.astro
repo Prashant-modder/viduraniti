@@ -1,13 +1,58 @@
 ---
 // src/components/SummaryPage.astro
 import Prose from './Prose.astro';
+import ContentCard from './ContentCard.astro';
 import { renderInline } from '@/lib/md';
+import { slug } from '@/lib/slug';
 
-interface Props { data: any }
-const { data } = Astro.props;
-const { summary, moral, quotes = [], mascot, extras = {} } = data ?? {};
+/*
+  summary.js exports (all optional):
+    summary   Markdown overview
+    moral     one line
+    quotes    [{ text, by? }]  one is picked at random
+    mascot    { pose }
+    extras    { "Heading": [string | { label, text }] }          (Maths / Science / language lists)
+    sections  story-style summary in up to 3 levels (blue / green / orange):
+      { id?, level?, title, body?, terms?: string[], cards?: Card[], embeds?: Embed[], children?: Section[] }
+      level defaults to the nesting depth (1, 2, 3). id defaults to a slug of the title.
+      Card: see ContentCard.astro
+      Embed: { kind: 'map' | 'timeline' | 'chart', id, caption?, preview? }
+        timeline preview: { items: [{ date, label }] }
+        chart preview:    { rows: [{ label, value }] }
+        map preview:      { image?, alt?, note? }
+      An embed links to {base}/{maps|timelines|charts}/{id}.
+  NOTE: never use a <nav> tag in page components. global.css styles every <nav> as the fixed top bar.
+  `base` is the chapter base path, e.g. /ncert/class-8/subject:social-science/book/unit-1/chapter-1-1
+*/
+interface Embed { kind: 'map' | 'timeline' | 'chart'; id: string; caption?: string; preview?: any }
+interface Section {
+  id?: string; level?: number; title: string; body?: string;
+  terms?: string[]; cards?: any[]; embeds?: Embed[]; children?: Section[];
+}
+interface Props { data: any; base?: string }
+const { data, base = '' } = Astro.props;
+const { summary, moral, quotes = [], mascot, extras = {}, sections = [] } = data ?? {};
 const first = quotes[0];
 const pose = mascot?.pose;
+
+const flat: { s: Section; level: number; id: string }[] = [];
+const walk = (list: Section[], depth: number) => {
+  for (const s of list) {
+    const level = Math.min(Math.max(s.level ?? depth, 1), 3);
+    flat.push({ s, level, id: s.id ?? slug(s.title) });
+    if (s.children?.length) walk(s.children, depth + 1);
+  }
+};
+walk(sections as Section[], 1);
+const outline = flat.filter((f) => f.level <= 2);
+
+const FOLDER = { map: 'maps', timeline: 'timelines', chart: 'charts' } as const;
+const KIND = { map: 'Map', timeline: 'Timeline', chart: 'Chart' } as const;
+const glossHref = base ? `${base}/glossary` : '';
+const pct = (rows: any[], v: number) => {
+  const m = Math.max(...rows.map((r) => Number(r.value) || 0), 1);
+  return Math.max(3, Math.round((Number(v) / m) * 100));
+};
 ---
 
 <div class="sm">
@@ -19,6 +64,63 @@ const pose = mascot?.pose;
       <p class="sm-moral">{moral}</p>
     </section>
   )}
+
+  {outline.length > 1 && (
+    <div class="sm-outline" role="navigation" aria-label="Summary outline">
+      <div class="sm-outline-title">In this summary</div>
+      <ul>
+        {outline.map((f) => (
+          <li class={`ol-${f.level}`}><a href={`#${f.id}`}>{f.s.title}</a></li>
+        ))}
+      </ul>
+    </div>
+  )}
+
+  {flat.map(({ s, level, id }) => {
+    const Tag = (['h2', 'h3', 'h4'] as const)[level - 1];
+    return (
+      <section class={`sm-sec lv${level}`} id={id}>
+        <Tag class="sm-sec-title">{s.title}</Tag>
+        {s.body && <Prose md={s.body} />}
+        {s.cards?.map((c: any) => <ContentCard card={c} />)}
+        {s.embeds?.map((e: Embed) => (
+          <div class="emb">
+            <div class="emb-head">
+              <span class="emb-kind">{KIND[e.kind]}</span>
+              {e.caption && <span class="emb-cap">{e.caption}</span>}
+            </div>
+            {e.kind === 'timeline' && (e.preview?.items?.length ?? 0) > 0 && (
+              <ol class="emb-strip">
+                {e.preview.items.map((i: any) => <li><b>{i.date}</b><span>{i.label}</span></li>)}
+              </ol>
+            )}
+            {e.kind === 'chart' && (e.preview?.rows?.length ?? 0) > 0 && (
+              <div class="emb-bars">
+                {e.preview.rows.map((r: any) => (
+                  <div class="emb-bar"><span>{r.label}</span><i style={`width:${pct(e.preview.rows, r.value)}%`}></i></div>
+                ))}
+              </div>
+            )}
+            {e.kind === 'map' && e.preview?.image && (
+              <img class="emb-img" src={e.preview.image} alt={e.preview.alt ?? ''} loading="lazy" onerror="this.style.display='none'" />
+            )}
+            {e.kind === 'map' && e.preview?.note && <p class="emb-note">{e.preview.note}</p>}
+            {base && (
+              <a class="emb-open" href={`${base}/${FOLDER[e.kind]}/${e.id}`}>Open the full {KIND[e.kind].toLowerCase()}</a>
+            )}
+          </div>
+        ))}
+        {(s.terms?.length ?? 0) > 0 && (
+          <div class="sm-terms">
+            <span>Key terms</span>
+            {s.terms!.map((t: string) =>
+              glossHref ? <a href={`${glossHref}#term-${slug(t)}`}>{t}</a> : <em>{t}</em>
+            )}
+          </div>
+        )}
+      </section>
+    );
+  })}
 
   {Object.entries(extras).map(([heading, items]: [string, any]) => (
     <section class="sm-block">
@@ -74,10 +176,55 @@ const pose = mascot?.pose;
   .sm-heading { font-family: var(--font-ui); font-size: 20px; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
   .sm-moral { padding: 12px 16px; border-left: 3px solid var(--saffron); background: var(--saffron-light); border-radius: 0 8px 8px 0; }
   .sm-list { margin-left: 22px; line-height: 1.7; }
+
+  .sm-outline { margin-top: 24px; padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-family: var(--font-ui); font-size: 14px; }
+  .sm-outline-title { font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+  .sm-outline ul { list-style: none; display: flex; flex-direction: column; gap: 3px; }
+  .sm-outline a { color: var(--ink-muted); text-decoration: none; }
+  .sm-outline a:hover { color: var(--ink); text-decoration: underline; }
+  .sm-outline .ol-2 { padding-left: 16px; font-size: 13px; }
+
+  .lv1 { --lv: #1F5FBF; }
+  .lv2 { --lv: #1A7F5A; }
+  .lv3 { --lv: #D9641E; }
+  :global([data-theme="dark"]) .lv1 { --lv: #6EA8FF; }
+  :global([data-theme="dark"]) .lv2 { --lv: #2DBF85; }
+  :global([data-theme="dark"]) .lv3 { --lv: #F08A4B; }
+  .sm-sec { margin-top: 32px; }
+  .sm-sec.lv2 { margin-left: 10px; margin-top: 24px; }
+  .sm-sec.lv3 { margin-left: 20px; margin-top: 20px; }
+  .sm-sec-title { font-family: var(--font-ui); font-weight: 600; color: var(--ink); padding-left: 12px; border-left: 4px solid var(--lv); margin-bottom: 10px; line-height: 1.3; }
+  .lv1 .sm-sec-title { font-size: 22px; }
+  .lv2 .sm-sec-title { font-size: 18px; }
+  .lv3 .sm-sec-title { font-size: 16px; }
+
+  .emb { margin: 16px 0; padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-family: var(--font-ui); }
+  .emb-head { display: flex; gap: 10px; align-items: baseline; margin-bottom: 8px; }
+  .emb-kind { font-size: 12px; font-weight: 600; color: var(--saffron); }
+  .emb-cap { font-size: 14px; color: var(--ink); }
+  .emb-strip { list-style: none; display: flex; gap: 0; overflow-x: auto; padding-bottom: 4px; }
+  .emb-strip li { flex: 0 0 auto; min-width: 96px; max-width: 140px; padding: 6px 10px; border-top: 2px solid var(--saffron); font-size: 12px; line-height: 1.35; display: flex; flex-direction: column; gap: 2px; }
+  .emb-strip b { color: var(--ink); }
+  .emb-strip span { color: var(--ink-muted); }
+  .emb-bars { display: flex; flex-direction: column; gap: 5px; }
+  .emb-bar { display: grid; grid-template-columns: 110px 1fr; gap: 8px; align-items: center; font-size: 12px; color: var(--ink-muted); }
+  .emb-bar i { display: block; height: 8px; border-radius: 4px; background: var(--saffron); }
+  .emb-img { max-width: 100%; height: auto; border-radius: 6px; display: block; }
+  .emb-note { font-size: 13px; color: var(--ink-muted); margin-top: 6px; }
+  .emb-open { display: inline-block; margin-top: 10px; font-size: 13px; font-weight: 500; color: var(--saffron); text-decoration: none; }
+  .emb-open:hover { text-decoration: underline; }
+
+  .sm-terms { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-family: var(--font-ui); font-size: 12px; color: var(--ink-muted); }
+  .sm-terms a, .sm-terms em { font-style: normal; padding: 2px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--ink); text-decoration: none; }
+  .sm-terms a:hover { border-color: var(--saffron); }
+
   .sm-corner { margin-top: 48px; display: flex; justify-content: flex-end; align-items: flex-end; gap: 16px; }
   .sm-quote { max-width: 34ch; padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px 12px 4px 12px; background: var(--surface); font-style: italic; font-size: 15px; line-height: 1.55; }
   .sm-quote cite { display: block; margin-top: 4px; font-family: var(--font-ui); font-size: 12px; font-style: normal; color: var(--ink-muted); }
   .sm-quote cite:empty { display: none; }
   .sm-mascot { width: 140px; height: 140px; object-fit: contain; flex-shrink: 0; }
-  @media (max-width: 480px) { .sm-corner { flex-direction: column; align-items: flex-end; } }
+  @media (max-width: 480px) {
+    .sm-corner { flex-direction: column; align-items: flex-end; }
+    .emb-bar { grid-template-columns: 80px 1fr; }
+  }
 </style>

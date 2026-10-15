@@ -1,0 +1,65 @@
+---
+// src/components/ContentCard.astro
+import { renderMd } from '@/lib/md';
+
+/*
+  Content boxes (nothing for the student to answer).
+    remember   { type: 'remember', text }                                      "Let's Remember": a paragraph only
+    spotlight  { type: 'spotlight', title, text, image?, alt?, caption? }      "Don't Miss Out": a person or place (GK)
+    source     { type: 'source', text, by? }                                   a primary-source extract (paraphrase it, or quote under 15 words)
+  Images are optional. Use your own illustration or a properly licensed image with credit,
+  never a copied NCERT photo.
+*/
+interface Card {
+  type: 'remember' | 'spotlight' | 'source';
+  title?: string;
+  text: string;
+  image?: string;
+  alt?: string;
+  caption?: string;
+  by?: string;
+}
+interface Props { card: Card }
+const { card } = Astro.props;
+const isSpot = card.type === 'spotlight';
+const isSrc = card.type === 'source';
+---
+
+<aside class={`cc ${isSpot ? 'cc-spot' : isSrc ? 'cc-src' : 'cc-rem'}`}>
+  <div class="cc-label">{isSpot ? "Don't miss out" : isSrc ? 'From a source' : "Let's remember"}</div>
+  <div class="cc-row">
+    <div class="cc-body">
+      {card.title && <div class="cc-title">{card.title}</div>}
+      <div class="cc-text" set:html={renderMd(card.text)} />
+      {isSrc && card.by && <div class="cc-by">{card.by}</div>}
+    </div>
+    {isSpot && card.image && (
+      <figure class="cc-fig">
+        <img src={card.image} alt={card.alt ?? card.title ?? ''} loading="lazy" onerror="this.parentElement.style.display='none'" />
+        {card.caption && <figcaption>{card.caption}</figcaption>}
+      </figure>
+    )}
+  </div>
+</aside>
+
+<style>
+  .cc { max-width: 68ch; margin: 16px 0; padding: 12px 16px; border-radius: 0 8px 8px 0; border-left: 4px solid var(--saffron); font-size: 16px; line-height: 1.65; }
+  .cc-rem { background: var(--saffron-light); }
+  .cc-spot { background: var(--green-light); border-left-color: var(--green); }
+  .cc-src { background: var(--surface); border-left-color: var(--ink-muted); }
+  .cc-src .cc-text { font-style: italic; }
+  .cc-src .cc-label { color: var(--ink-muted); }
+  .cc-by { font-family: var(--font-ui); font-size: 12px; color: var(--ink-muted); margin-top: 6px; }
+  .cc-label { font-family: var(--font-ui); font-size: 12px; font-weight: 600; letter-spacing: .04em; margin-bottom: 6px; }
+  .cc-rem .cc-label { color: var(--tag-text); }
+  .cc-spot .cc-label { color: var(--green); }
+  .cc-row { display: flex; gap: 16px; align-items: flex-start; }
+  .cc-body { flex: 1; min-width: 0; }
+  .cc-title { font-family: var(--font-ui); font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+  .cc-text :global(p) { margin-bottom: 8px; }
+  .cc-text :global(p:last-child) { margin-bottom: 0; }
+  .cc-fig { width: 120px; flex-shrink: 0; margin: 0; }
+  .cc-fig img { width: 100%; height: auto; border-radius: 6px; display: block; }
+  .cc-fig figcaption { font-family: var(--font-ui); font-size: 11px; color: var(--ink-muted); margin-top: 4px; line-height: 1.4; }
+  @media (max-width: 480px) { .cc-row { flex-direction: column; } .cc-fig { width: 100%; max-width: 200px; } }
+</style>

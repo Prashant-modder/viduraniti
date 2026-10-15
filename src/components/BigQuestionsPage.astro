@@ -1,0 +1,70 @@
+---
+// src/components/BigQuestionsPage.astro
+import Prose from './Prose.astro';
+import { renderInline } from '@/lib/md';
+
+/*
+  big-questions.js exports:
+    intro?      Markdown shown above the list
+    questions   [{ q, teaser?, answeredIn?: (string | { id, label? })[] }]
+  answeredIn holds summary section ids; each becomes a link to {base}/summary#{id}.
+  `base` is the chapter base path.
+*/
+interface Link { id: string; label?: string }
+interface Q { q: string; teaser?: string; answeredIn?: (string | Link)[] }
+interface Props { data: any; base?: string }
+const { data, base = '' } = Astro.props;
+const intro: string | undefined = data?.intro;
+const questions: Q[] = data?.questions ?? [];
+
+const pretty = (id: string) => id.replace(/-/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+const toLink = (l: string | Link) =>
+  typeof l === 'string' ? { id: l, label: pretty(l) } : { id: l.id, label: l.label ?? pretty(l.id) };
+---
+
+{intro && <Prose md={intro} />}
+
+{questions.length > 0 ? (
+  <>
+    <p class="bq-tip">Try answering each question in your head first, then open the hint to check your thinking.</p>
+    <ol class="bq-list">
+      {questions.map((item) => (
+        <li class="bq">
+          <div class="bq-q" set:html={renderInline(item.q)} />
+          {item.teaser && (
+            <details class="bq-hint">
+              <summary>Check your thinking</summary>
+              <div set:html={renderInline(item.teaser)} />
+            </details>
+          )}
+          {base && (item.answeredIn?.length ?? 0) > 0 && (
+            <div class="bq-links">
+              <span>Read more</span>
+              {item.answeredIn!.map((l) => {
+                const k = toLink(l);
+                return <a href={`${base}/summary#${k.id}`}>{k.label}</a>;
+              })}
+            </div>
+          )}
+        </li>
+      ))}
+    </ol>
+  </>
+) : (
+  <p class="vn-muted">Big questions coming soon.</p>
+)}
+
+<style>
+  .bq-tip { max-width: 68ch; margin: 8px 0 20px; font-family: var(--font-ui); font-size: 14px; color: var(--ink-muted); }
+  .bq-list { list-style: none; counter-reset: bq; max-width: 68ch; display: flex; flex-direction: column; gap: 14px; }
+  .bq { counter-increment: bq; position: relative; padding: 14px 16px 14px 52px; border: 1px solid var(--border); border-left: 3px solid var(--saffron); border-radius: 0 8px 8px 0; background: var(--surface); }
+  .bq::before { content: counter(bq); position: absolute; left: 16px; top: 12px; font-family: var(--font-ui); font-size: 22px; font-weight: 700; color: var(--saffron); line-height: 1.2; }
+  .bq-q { font-size: 18px; line-height: 1.55; color: var(--ink); }
+  .bq-hint { margin-top: 10px; font-size: 15px; color: var(--ink-muted); }
+  .bq-hint summary { cursor: pointer; font-family: var(--font-ui); font-size: 13px; font-weight: 500; color: var(--green); }
+  .bq-hint[open] summary { margin-bottom: 6px; }
+  .bq-links { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-family: var(--font-ui); font-size: 12px; color: var(--ink-faint); }
+  .bq-links a { padding: 2px 10px; border: 1px solid var(--border); border-radius: 999px; color: var(--ink); text-decoration: none; background: var(--bg); }
+  .bq-links a:hover { border-color: var(--saffron); }
+  @media (max-width: 480px) { .bq { padding-left: 44px; } .bq::before { left: 12px; } }
+</style>

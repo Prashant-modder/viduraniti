@@ -1,0 +1,88 @@
+---
+// src/components/GlossaryPage.astro
+import { renderInline } from '@/lib/md';
+import { slug } from '@/lib/slug';
+
+/*
+  glossary.js (per chapter) exports: terms = [{ term, meaning, context? }]
+  The book-level page is built by the route from every chapter's glossary: each term also gets
+  `chapter: { label, href }`, and duplicate terms are merged before they reach this component.
+  Each row has id="term-{slug}" so summaries and other pages can link straight to a term.
+*/
+interface Term { term: string; meaning: string; context?: string; chapter?: { label: string; href: string } }
+interface Props { terms: Term[]; scope?: 'chapter' | 'book' }
+const { terms = [], scope = 'chapter' } = Astro.props;
+const sorted = [...terms].sort((a, b) => a.term.localeCompare(b.term));
+---
+
+{sorted.length > 0 ? (
+  <>
+    <div class="gl-tools">
+      <input id="gl-search" type="search" placeholder="Search terms" aria-label="Search terms" />
+      <button id="gl-quiz" type="button">Test yourself</button>
+    </div>
+    <p class="gl-count">{sorted.length} {sorted.length === 1 ? 'term' : 'terms'}{scope === 'book' ? ' across the book' : ''}</p>
+
+    <dl id="gl-list" class="gl">
+      {sorted.map((t) => (
+        <div class="gl-row" id={`term-${slug(t.term)}`} data-search={`${t.term} ${t.meaning}`.toLowerCase()}>
+          <dt>{t.term}</dt>
+          <dd>
+            <span class="gl-meaning" set:html={renderInline(t.meaning)} />
+            {t.context && <span class="gl-ctx" set:html={renderInline(t.context)} />}
+            {t.chapter && <a class="gl-ch" href={t.chapter.href}>{t.chapter.label}</a>}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  </>
+) : (
+  <p class="vn-muted">Glossary coming soon.</p>
+)}
+
+<script>
+  const search = document.getElementById('gl-search') as HTMLInputElement | null;
+  const rows = document.querySelectorAll<HTMLElement>('.gl-row');
+  const list = document.getElementById('gl-list');
+  const quiz = document.getElementById('gl-quiz');
+
+  search?.addEventListener('input', () => {
+    const v = search.value.trim().toLowerCase();
+    rows.forEach((r) => { r.hidden = v !== '' && !(r.dataset.search ?? '').includes(v); });
+  });
+
+  quiz?.addEventListener('click', () => {
+    const on = list?.classList.toggle('quiz');
+    quiz.textContent = on ? 'Show all meanings' : 'Test yourself';
+    rows.forEach((r) => r.classList.remove('shown'));
+  });
+
+  rows.forEach((r) => r.addEventListener('click', () => {
+    if (list?.classList.contains('quiz')) r.classList.toggle('shown');
+  }));
+</script>
+
+<style>
+  .gl-tools { display: flex; gap: 8px; max-width: 68ch; margin-bottom: 8px; }
+  .gl-tools input { flex: 1; min-width: 0; font-family: var(--font-ui); font-size: 14px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--ink); }
+  .gl-tools input:focus { outline: 2px solid var(--saffron); outline-offset: 1px; }
+  .gl-tools button { font-family: var(--font-ui); font-size: 13px; font-weight: 500; padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; background: none; color: var(--ink); cursor: pointer; white-space: nowrap; }
+  .gl-tools button:hover { border-color: var(--saffron); }
+  .gl-count { font-family: var(--font-ui); font-size: 12px; color: var(--ink-faint); margin-bottom: 16px; }
+
+  .gl { max-width: 68ch; display: flex; flex-direction: column; }
+  .gl-row { display: grid; grid-template-columns: 150px 1fr; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .gl-row[hidden] { display: none; }
+  .gl-row:target { background: var(--saffron-light); padding-left: 10px; padding-right: 10px; border-radius: 6px; }
+  .gl dt { font-family: var(--font-ui); font-weight: 600; font-size: 15px; color: var(--ink); }
+  .gl dd { font-size: 16px; line-height: 1.6; color: var(--ink); display: flex; flex-direction: column; gap: 4px; }
+  .gl-ctx { font-size: 14px; color: var(--ink-muted); font-style: italic; }
+  .gl-ch { font-family: var(--font-ui); font-size: 12px; color: var(--saffron); text-decoration: none; }
+  .gl-ch:hover { text-decoration: underline; }
+
+  .gl.quiz .gl-row { cursor: pointer; }
+  .gl.quiz .gl-row:not(.shown) dd { visibility: hidden; position: relative; }
+  .gl.quiz .gl-row:not(.shown) dd::before { content: 'Tap to reveal'; visibility: visible; position: absolute; left: 0; font-family: var(--font-ui); font-size: 13px; color: var(--ink-faint); }
+
+  @media (max-width: 480px) { .gl-row { grid-template-columns: 1fr; gap: 4px; } }
+</style>
