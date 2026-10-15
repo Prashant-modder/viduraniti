@@ -19,7 +19,9 @@ interface Props {
 
 const { bookTitle, bookSlug, bookSub, classNum, subject, units, mode, activeUnit, activeChapter, pageLinks = [], bookLinks = [] } = Astro.props;
 const base = `/ncert/class-${classNum}/subject:${subject}/${bookSlug}`;
-const keyOf = (c: Chapter) => `chapter-${c.abs}${c.pos ? '-' + c.pos : ''}`;
+// Folder name is the key: chapter-1-1, chapter-a-1, chapter-8.
+const keyOf = (c: Chapter) => c.href.split('/').pop()!;
+const codeOf = (c: Chapter) => keyOf(c).replace('chapter-', '').toUpperCase();
 ---
 
 <aside class="sidebar">
@@ -39,18 +41,20 @@ const keyOf = (c: Chapter) => `chapter-${c.abs}${c.pos ? '-' + c.pos : ''}`;
 
   {units.map((u) => (
     <div class="sidebar-unit">
-      <div class="sidebar-unit-label">
-        {mode === 'unit' && u.slug ? (
-          <a href={`${base}/${u.slug}`} class={activeUnit === u.slug ? 'active-unit' : ''}>{u.label}</a>
-        ) : (
-          u.label
-        )}
-      </div>
+      {u.label && (
+        <div class="sidebar-unit-label">
+          {mode === 'unit' && u.slug ? (
+            <a href={`${base}/${u.slug}`} class={activeUnit === u.slug ? 'active-unit' : ''}>{u.label}</a>
+          ) : (
+            u.label
+          )}
+        </div>
+      )}
       <div class="sidebar-ch">
         {u.chapters.map((c) => (
           <>
             <a href={c.href} class={activeChapter === keyOf(c) ? 'active' : ''}>
-              Ch {c.abs}{c.pos ? `-${c.pos}` : ''} · {c.title}
+              Ch {codeOf(c)} · {c.title}
             </a>
             {activeChapter === keyOf(c) && pageLinks.length > 0 && (
               <div class="sidebar-page-links">

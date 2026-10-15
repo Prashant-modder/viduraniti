@@ -12,7 +12,7 @@ export interface Route {
 // Fixed page types at chapter root, in sidebar / prev-next order. Solutions follow, then collections.
 export const RESERVED = ['textbook', 'exam-notes', 'summary', 'big-questions', 'glossary'];
 
-// Sub-folders of a chapter. URL: {chapter}/{folder}/{name}
+// Chapter sub-folders. URL: {chapter}/{folder}/{name}
 export const COLLECTIONS: Record<string, { type: string; label: string }> = {
   animations: { type: 'animation', label: 'Animation' },
   timelines: { type: 'timeline', label: 'Timeline' },
@@ -20,10 +20,16 @@ export const COLLECTIONS: Record<string, { type: string; label: string }> = {
   maps: { type: 'map', label: 'Map' },
 };
 
-// Pages that live at book level. URL: {book}/{name}
-export const BOOK_PAGES = ['glossary'];
+// Chapter groups. Folder name starts with one of these: unit-1, theme-a, project-2, section-b.
+const GROUP = /^(unit|theme|project|section)-/;
 
-const numOf = (s: string) => Number(s.replace(/\D/g, '')) || 0;
+// Sort key: digits if present (unit-3 -> 3), else trailing letter (theme-c -> 3).
+const orderOf = (s: string) => {
+  const d = s.replace(/\D/g, '');
+  if (d) return Number(d);
+  const m = s.match(/-([a-z])$/i);
+  return m ? m[1].toLowerCase().charCodeAt(0) - 96 : 0;
+};
 export const prettify = (slug: string) => slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 // Pages with `meta.status = 'draft'` show in dev only. Missing status = published.
@@ -55,16 +61,16 @@ export function loadBook(cls: string, subject: string, bookSlug: string) {
 
     if (parts.length === 1) {
       book = mod.book ?? null;
-    } else if (parts.length === 2 && parts[0].startsWith('unit-')) {
+    } else if (parts.length === 2 && GROUP.test(parts[0])) {
       unit(parts[0]).label = mod.unit?.label ?? null;
     } else if (parts.length === 2 && parts[0].startsWith('chapter-')) {
       const c = mod.chapter;
-      unit('').chapters.push({ title: c.title, abs: c.abs, href: `${base}/chapter-${c.abs}` });
+      unit('').chapters.push({ title: c.title, abs: c.abs, href: `${base}/${parts[0]}` });
     } else if (parts.length === 3) {
       const c = mod.chapter;
       unit(parts[0]).chapters.push({
         title: c.title, abs: c.abs, pos: c.pos,
-        href: `${base}/${parts[0]}/chapter-${c.abs}-${c.pos}`,
+        href: `${base}/${parts[0]}/${parts[1]}`,
       });
     }
   }
@@ -75,12 +81,26 @@ export function loadBook(cls: string, subject: string, bookSlug: string) {
       label: u.slug ? (u.label ?? prettify(u.slug)) : null,
       chapters: u.chapters.sort((a, b) => a.abs - b.abs),
     }))
-    .sort((a, b) => numOf(a.slug) - numOf(b.slug));
+    .sort((a, b) => orderOf(a.slug) - orderOf(b.slug));
 
-  const g = files[`${prefix}glossary.js`];
-  const glossary = g && live(g) ? g : null;
+  // Book glossary: every chapter's glossary.js merged, first definition of a term wins.
+  const seen = new Map<string, any>();
+  for (const u of list) {
+    for (const c of u.chapters) {
+      const cpath = c.href.slice(base.length + 1);
+      const m = files[`${prefix}${cpath}/glossary.js`];
+      if (!m || !live(m)) continue;
+      const code = c.href.split('/').pop()!.replace('chapter-', '').toUpperCase();
+      for (const t of m.terms ?? []) {
+        const k = String(t.term).toLowerCase();
+        if (!seen.has(k)) {
+          seen.set(k, { ...t, chapter: { label: `Ch ${code} · ${c.title}`, href: `${c.href}/glossary` } });
+        }
+      }
+    }
+  }
 
-  return { book, units: list, glossary };
+  return { book, units: list, bookTerms: [...seen.values()] };
 }
 
 export function loadChapter(cls: string, subject: string, book: string, chapterPath: string) {
@@ -115,6 +135,8 @@ export function loadUnit(cls: string, subject: string, book: string, unitSlug: s
 
 export function allRoutes(): Route[] {
   const out: Route[] = [];
+  const glossaryBooks = new Map<string, { cls: string; subject: string; book: string }>();
+
   for (const [p, m] of Object.entries(files)) {
     const [cls, subject, book, ...rest] = p.slice('/src/data/'.length).split('/');
     const file = rest.pop()!;
@@ -122,20 +144,8 @@ export function allRoutes(): Route[] {
     const last = rest[rest.length - 1] ?? '';
     const b = { cls, subject, book };
 
-    // book-level pages
-    if (rest.length === 0) {
-      if (BOOK_PAGES.includes(name) && live(m)) {
-        out.push({ ...b, kind: 'book', path: name, unit: '', chapter: '', page: name });
-      }
-      continue;
-    }
-
     // /chapter/{collection}/{name}
-    if (
-      last in COLLECTIONS &&
-      rest.length >= 2 && rest.length <= 3 &&
-      rest[rest.length - 2].startsWith('chapter-')
-    ) {
+    if (last in COLLECTIONS && rest.length >= 2 && rest.length <= 3 && rest[rest.length - 2].startsWith('chapter-')) {
       if (!live(m)) continue;
       const chapter = rest[rest.length - 2];
       const cpath = rest.slice(0, -1).join('/');
@@ -144,7 +154,7 @@ export function allRoutes(): Route[] {
       continue;
     }
 
-    if (rest.length === 1 && last.startsWith('unit-') && name === 'index') {
+    if (rest.length === 1 && GROUP.test(last) && name === 'index') {
       out.push({ ...b, kind: 'unit', path: last, unit: last, chapter: '', page: '' });
     } else if (last.startsWith('chapter-') && rest.length <= 2) {
       const unit = rest.length === 2 ? rest[0] : '';
@@ -153,10 +163,16 @@ export function allRoutes(): Route[] {
         out.push({ ...b, kind: 'chapter', path: cpath, unit, chapter: last, page: '' });
       } else {
         if (!live(m)) continue;
+        if (name === 'glossary') glossaryBooks.set(`${cls}/${subject}/${book}`, b);
         const path = RESERVED.includes(name) ? `${cpath}/${name}` : `${cpath}/solutions/${name}`;
         out.push({ ...b, kind: 'page', path, unit, chapter: last, page: name });
       }
     }
+  }
+
+  // Book-level glossary, one per book that has any chapter glossary.
+  for (const b of glossaryBooks.values()) {
+    out.push({ ...b, kind: 'book', path: 'glossary', unit: '', chapter: '', page: 'glossary' });
   }
   return out;
 }

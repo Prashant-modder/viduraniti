@@ -8,9 +8,7 @@ import ExamNotesPage from '@/components/ExamNotesPage.astro';
 import SummaryPage from '@/components/SummaryPage.astro';
 import GlossaryPage from '@/components/GlossaryPage.astro';
 import BigQuestionsPage from '@/components/BigQuestionsPage.astro';
-import TimelinePage from '@/components/TimelinePage.astro';
-import ChartPage from '@/components/ChartPage.astro';
-import MapPage from '@/components/MapPage.astro';
+import VisualPage from '@/components/VisualPage.astro';
 import AnimationPage from '@/components/AnimationPage.astro';
 import {
   loadBook, loadChapter, loadUnit, allRoutes, solutionKeys, prettify, RESERVED, COLLECTIONS,
@@ -32,12 +30,12 @@ const { kind, unitSlug, chapterSlug, page } = Astro.props as {
 const subKey = subject.replace('subject:', '');
 const subLabel = SUBJECT_LABELS[subKey] ?? subKey;
 const bookData = BOOKS[classNum]?.[subKey];
-const { units, glossary: bookGlossary } = loadBook(classNum, subKey, bookSlug);
+const { units, bookTerms } = loadBook(classNum, subKey, bookSlug);
 
+const noChapter = kind === 'unit' || kind === 'book';
 const chapterPath = unitSlug ? `${unitSlug}/${chapterSlug}` : chapterSlug;
 const currentUnit = units.find((u) => u.slug === unitSlug);
 const unitData = kind === 'unit' ? loadUnit(classNum, subKey, bookSlug, unitSlug) : null;
-const noChapter = kind === 'unit' || kind === 'book';
 const empty = { chapter: null as any, pages: {} as Record<string, any>, collections: {} as Record<string, Record<string, any>> };
 const { chapter, pages, collections } = noChapter ? empty : loadChapter(classNum, subKey, bookSlug, chapterPath);
 
@@ -48,10 +46,7 @@ const chapterBase = `${bookBase}/${chapterPath}`;
 const isColl = kind === 'page' && page.includes('/');
 const [collKey, collItem] = isColl ? page.split('/') : ['', ''];
 const coll = isColl ? COLLECTIONS[collKey] : undefined;
-const pageMod =
-  kind === 'book' ? bookGlossary
-  : kind === 'page' ? (isColl ? collections[collKey]?.[collItem] : pages[page])
-  : null;
+const pageMod = kind === 'page' ? (isColl ? collections[collKey]?.[collItem] : pages[page]) : null;
 const pt: string =
   kind === 'book' ? 'glossary'
   : kind !== 'page' ? kind
@@ -59,7 +54,7 @@ const pt: string =
   : RESERVED.includes(page) ? page
   : 'solutions';
 
-// Ordered page list: reserved, solutions (meta.order), then collections
+// Ordered page list: reserved pages, solutions (meta.order), then collections
 const solKeys = solutionKeys(pages);
 const solTitle = (n: string) => pages[n]?.meta?.title ?? prettify(n);
 const chapterPages = [
@@ -81,19 +76,19 @@ const chapterPages = [
 const pageLinks = noChapter ? [] : chapterPages.map((l) => ({
   label: l.label, href: l.href, active: kind === 'page' && l.key === page,
 }));
-
-const bookLinks = bookGlossary
+const bookLinks = bookTerms.length > 0
   ? [{ label: 'Book glossary', href: `${bookBase}/glossary`, active: kind === 'book' }]
   : [];
 
 const title =
   kind === 'unit' ? (unitData?.label ?? currentUnit?.label ?? prettify(unitSlug))
+  : kind === 'book' ? 'Glossary'
   : kind === 'chapter' ? (chapter?.title ?? chapterSlug)
-  : kind === 'book' ? (pageMod?.meta?.title ?? 'Glossary')
   : (pageMod?.meta?.title ?? prettify(isColl ? collItem : page));
 
 // prev / next: pages within the chapter, then neighbouring chapters
-const chLabel = (c: any) => `Ch ${c.abs}${c.pos ? '-' + c.pos : ''} · ${c.title}`;
+const chCode = (c: any) => c.href.split('/').pop()!.replace('chapter-', '').toUpperCase();
+const chLabel = (c: any) => `Ch ${chCode(c)} · ${c.title}`;
 const flat = units.flatMap((u) => u.chapters);
 const idx = flat.findIndex((c) => c.href === chapterBase);
 const pi = chapterPages.findIndex((l) => l.key === page);
@@ -121,7 +116,7 @@ const breadcrumb: { label: string; href?: string }[] = [
   { label: `Class ${classNum}`, href: `/ncert/class-${classNum}` },
   { label: subLabel, href: `/ncert/class-${classNum}/${subject}` },
 ];
-if (kind === 'unit' || kind === 'book') breadcrumb.push({ label: title });
+if (noChapter) breadcrumb.push({ label: title });
 else {
   if (unitSlug) breadcrumb.push({ label: unitName, href: `${bookBase}/${unitSlug}` });
   if (kind === 'chapter') breadcrumb.push({ label: chapter?.title ?? chapterSlug });
@@ -177,7 +172,7 @@ else {
             <div class="vn-list">
               {currentUnit?.chapters.map((c) => (
                 <a class="vn-row" href={c.href}>
-                  <small>Ch {c.abs}{c.pos ? `-${c.pos}` : ''}</small>
+                  <small>Ch {chCode(c)}</small>
                   <span>{c.title}</span>
                 </a>
               ))}
@@ -196,12 +191,17 @@ else {
 
           {pt === 'textbook' && <TextbookPage data={pageMod} />}
           {pt === 'exam-notes' && <ExamNotesPage data={pageMod} />}
-          {pt === 'summary' && <SummaryPage data={pageMod} />}
-          {pt === 'glossary' && <GlossaryPage data={pageMod} scope={kind === 'book' ? 'book' : 'chapter'} />}
-          {pt === 'big-questions' && <BigQuestionsPage data={pageMod} />}
-          {pt === 'timeline' && <TimelinePage data={pageMod} />}
-          {pt === 'chart' && <ChartPage data={pageMod} />}
-          {pt === 'map' && <MapPage data={pageMod} />}
+          {pt === 'summary' && <SummaryPage data={pageMod} base={chapterBase} />}
+          {pt === 'glossary' && (
+            <GlossaryPage
+              terms={kind === 'book' ? bookTerms : (pageMod?.terms ?? [])}
+              scope={kind === 'book' ? 'book' : 'chapter'}
+            />
+          )}
+          {pt === 'big-questions' && <BigQuestionsPage data={pageMod} base={chapterBase} />}
+          {pt === 'timeline' && <VisualPage data={pageMod} kind="timeline" />}
+          {pt === 'chart' && <VisualPage data={pageMod} kind="chart" />}
+          {pt === 'map' && <VisualPage data={pageMod} kind="map" />}
           {pt === 'animation' && <AnimationPage data={pageMod} />}
         </PageShell>
       </main>
