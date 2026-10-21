@@ -1,6 +1,6 @@
 export const chapter = {
-  title: "Natural Resources and Their Use",
-  abs: 1,
+  title: "The Rise of the Marathas",
+  abs: 3,
   pos: 1,
-  unit: "theme-a"
+  unit: "unit-1"
 };
