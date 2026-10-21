@@ -18,7 +18,9 @@ import { renderInline } from '@/lib/md';
 
   map       export const description = "..."; export const places = [{ name, kind?, note?, lat?, lng? }]
             kind: region | hill-fort | coastal-fort | land-fort | port | city | foreign (grouped like a legend).
-            lat/lng are kept for the later vector map engine. For now this page lists the places.
+            Places with lat/lng are drawn as numbered markers on a simple SVG map (approximate India outline,
+            zoomed to fit the places). The numbers match the list below the map. Places without lat/lng
+            (regions, foreign powers) appear in the list only.
 */
 interface Props { data: any; kind: 'map' | 'timeline' | 'chart' }
 const { data, kind } = Astro.props;
@@ -47,10 +49,37 @@ const KIND_LABEL: Record<string, string> = {
   region: 'Territories', 'hill-fort': 'Hill forts', 'coastal-fort': 'Coastal forts', 'land-fort': 'Land forts',
   port: 'Ports', city: 'Cities', foreign: 'Foreign powers',
 };
+
+// Numbered markers for places that have coordinates.
+const geo = places.filter((p) => typeof p.lat === 'number' && typeof p.lng === 'number');
+const num = new Map<any, number>(geo.map((p, i) => [p, i + 1]));
+
 const groups = new Map<string, any[]>();
 for (const p of places) {
   const label = KIND_LABEL[p.kind] ?? 'Places';
   groups.set(label, [...(groups.get(label) ?? []), p]);
+}
+
+// Simplified India outline as [lat, lng]. Schematic only, not survey-accurate.
+const OUTLINE: [number, number][] = [
+  [34.5, 74], [32.5, 78.5], [30, 81], [28, 84], [27.5, 88.5], [27, 92], [28, 96.5], [25, 93], [22, 92.5],
+  [21.5, 89], [20, 87], [17, 82.5], [13, 80.3], [10, 79.8], [8.1, 77.5], [10, 76.3], [15, 74], [19, 72.8],
+  [21, 72.5], [22.5, 69], [24.5, 68.5], [26, 70], [28, 70], [30, 71.5], [32, 74.5],
+];
+
+const W = 600;
+let H = 0, outlinePath = '';
+let pts: { p: any; n: number; x: number; y: number }[] = [];
+if (kind === 'map' && geo.length > 0) {
+  const PAD = 1.2;
+  const minLat = Math.min(...geo.map((p) => p.lat)) - PAD, maxLat = Math.max(...geo.map((p) => p.lat)) + PAD;
+  const minLng = Math.min(...geo.map((p) => p.lng)) - PAD, maxLng = Math.max(...geo.map((p) => p.lng)) + PAD;
+  const s = W / (maxLng - minLng);
+  H = Math.round((maxLat - minLat) * s);
+  const X = (lng: number) => ((lng - minLng) * s).toFixed(1);
+  const Y = (lat: number) => ((maxLat - lat) * s).toFixed(1);
+  outlinePath = 'M' + OUTLINE.map(([la, lo]) => `${X(lo)} ${Y(la)}`).join('L') + 'Z';
+  pts = geo.map((p) => ({ p, n: num.get(p)!, x: Number(X(p.lng)), y: Number(Y(p.lat)) }));
 }
 ---
 
@@ -125,16 +154,38 @@ for (const p of places) {
 
 {kind === 'map' && (
   <>
-    <div class="mp-soon">
-      <p class="mp-soon-title">Interactive map coming soon</p>
-      {data?.description && <p class="mp-soon-text">{data.description}</p>}
-    </div>
+    {data?.description && <p class="mp-desc">{data.description}</p>}
+
+    {pts.length > 0 ? (
+      <figure class="mp-fig">
+        <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={data?.description ?? data?.meta?.title ?? 'Map'} class="mp-svg">
+          <rect width={W} height={H} class="mp-sea" />
+          <path d={outlinePath} class="mp-land" />
+          {pts.map((m) => (
+            <g class={`mk k-${m.p.kind ?? 'place'}`} transform={`translate(${m.x} ${m.y})`}>
+              <title>{m.p.name}</title>
+              <circle r="10" />
+              <text y="3.5" text-anchor="middle">{m.n}</text>
+            </g>
+          ))}
+        </svg>
+        <figcaption class="mp-cap">Schematic map with an approximate coastline. Numbers match the list below.</figcaption>
+      </figure>
+    ) : (
+      <div class="mp-soon">
+        <p class="mp-soon-title">Map coming soon</p>
+      </div>
+    )}
+
     {[...groups].map(([label, items]) => (
       <section class="mp-group">
         <h2 class="mp-group-title">{label}</h2>
         <ul class="mp-places">
           {items.map((p) => (
-            <li><b>{p.name}</b>{p.note && <span> {p.note}</span>}</li>
+            <li>
+              {num.get(p) && <span class={`mp-n k-${p.kind ?? 'place'}`}>{num.get(p)}</span>}
+              <b>{p.name}</b>{p.note && <span class="mp-note"> {p.note}</span>}
+            </li>
           ))}
         </ul>
       </section>
@@ -169,13 +220,32 @@ for (const p of places) {
   .gn-name small { font-size: 12px; font-weight: 400; color: var(--ink-muted); }
   .gn-note { font-size: 13px; color: var(--ink-muted); margin-top: 2px; }
 
+  .mp-desc { max-width: 68ch; margin: 8px 0 16px; font-family: var(--font-ui); font-size: 14px; color: var(--ink-muted); }
+  .mp-fig { max-width: 640px; margin: 0 0 8px; }
+  .mp-svg { display: block; width: 100%; height: auto; border: 1px solid var(--border); border-radius: 12px; }
+  .mp-sea { fill: var(--surface-2); }
+  .mp-land { fill: var(--bg); stroke: var(--ink-faint); stroke-width: 1.5; stroke-linejoin: round; }
+  .mp-cap { margin-top: 6px; font-family: var(--font-ui); font-size: 12px; color: var(--ink-faint); }
+  .mk circle { stroke: var(--bg); stroke-width: 2; fill: var(--ink-muted); }
+  .mk text { fill: #fff; font-family: var(--font-ui); font-size: 10px; font-weight: 600; pointer-events: none; }
+  .mk.k-hill-fort circle { fill: var(--saffron); }
+  .mk.k-coastal-fort circle { fill: var(--green); }
+  .mk.k-land-fort circle { fill: #8A5A9E; }
+  .mk.k-port circle { fill: #1F5FBF; }
+  .mk.k-city circle { fill: #D9641E; }
+
   .mp-soon { padding: 40px 24px; border: 1px dashed var(--border); border-radius: 12px; background: var(--surface); text-align: center; font-family: var(--font-ui); max-width: 68ch; }
   .mp-soon-title { font-size: 16px; font-weight: 600; color: var(--ink); }
-  .mp-soon-text { margin-top: 6px; font-size: 14px; color: var(--ink-muted); }
   .mp-group { max-width: 68ch; margin-top: 24px; }
   .mp-group-title { font-family: var(--font-ui); font-size: 16px; font-weight: 600; color: var(--ink); }
-  .mp-places { margin: 6px 0 0 22px; line-height: 1.7; font-size: 15px; }
-  .mp-places span { color: var(--ink-muted); }
+  .mp-places { list-style: none; margin: 8px 0 0; display: flex; flex-direction: column; gap: 4px; font-size: 15px; line-height: 1.6; }
+  .mp-note { color: var(--ink-muted); }
+  .mp-n { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; margin-right: 8px; border-radius: 50%; background: var(--ink-muted); color: #fff; font-family: var(--font-ui); font-size: 11px; font-weight: 600; vertical-align: 1px; }
+  .mp-n.k-hill-fort { background: var(--saffron); }
+  .mp-n.k-coastal-fort { background: var(--green); }
+  .mp-n.k-land-fort { background: #8A5A9E; }
+  .mp-n.k-port { background: #1F5FBF; }
+  .mp-n.k-city { background: #D9641E; }
 
   .hub { max-width: 68ch; display: flex; flex-direction: column; align-items: center; font-family: var(--font-ui); }
   .hub-center { padding: 14px 28px; border: 2px solid var(--saffron); border-radius: 999px; background: var(--saffron-light); text-align: center; }
