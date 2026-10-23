@@ -32,6 +32,9 @@
       <rect class="wm-sea" x="-5000" y="-5000" width="13600" height="11800" />
       <g id="wm-countries"></g>
       <g id="wm-india"></g>
+      <g id="wm-fstates"></g>
+      <g id="wm-districts"></g>
+      <g id="wm-rivers"></g>
       <g id="wm-user"></g>
       <g id="wm-labels"></g>
       <g id="wm-draft"></g>
@@ -48,6 +51,12 @@
       <label>Inside<input id="wm-f-parent" type="text" /></label>
       <label>Details<textarea id="wm-f-note" rows="3" placeholder="Capital, population, source, length, notes…"></textarea></label>
       <div class="wm-row"><button id="wm-f-save" type="button" class="primary">Save</button><button id="wm-f-cancel" type="button">Cancel</button></div>
+    </div>
+
+    <div class="wm-layers">
+      <label><input type="checkbox" id="ly-d" checked /> Districts (India)</label>
+      <label><input type="checkbox" id="ly-f" checked /> States (world)</label>
+      <label><input type="checkbox" id="ly-r" checked /> Rivers</label>
     </div>
 
     <div id="wm-info" class="wm-info"><div class="wm-muted">Hover or click a country, a state or a drawn item to see its details.</div></div>
@@ -102,7 +111,7 @@ function apply() {
   scale = cw / view.w;
   svg.setAttribute('viewBox', `${view.cx - view.w / 2} ${view.cy - h / 2} ${view.w} ${h}`);
   svg.style.setProperty('--px', String(1 / scale));
-  cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { labels(); drawDraft(); });
+  cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { layers(); labels(); drawDraft(); });
 }
 function toSvg(e) {
   const r = svg.getBoundingClientRect(), h = (view.w * ch) / cw;
@@ -119,6 +128,34 @@ function fit(b, pad = 1.35) {
   view.cx = (b[0] + b[2]) / 2; view.cy = (b[1] + b[3]) / 2; apply();
 }
 
+// ---------- official layers (loaded when you zoom in) ----------
+const LAYERS = {
+  d: { file: '/data/india-districts.json', g: 'wm-districts', max: 700 },
+  f: { file: '/data/states.json', g: 'wm-fstates', max: 1200 },
+  r: { file: '/data/rivers.json', g: 'wm-rivers', max: 2200 },
+};
+const loaded = {}, vis = {};
+async function loadLayer(k) {
+  if (loaded[k] !== undefined) return;
+  loaded[k] = null;
+  try {
+    const j = await (await fetch(LAYERS[k].file)).json(); loaded[k] = j;
+    const g = $(LAYERS[k].g), lg = $('wm-labels');
+    if (k === 'd') j.districts.forEach((d, i) => { mk('path', { d: d.d, class: 'wm-di', 'data-k': 'd', 'data-i': i }, g); if (d.r > 3) { const t = mk('text', { x: d.c[0], y: d.c[1], class: 'wm-lb d', 'text-anchor': 'middle' }, lg); t.textContent = d.n; t._r = d.r; t._k = 'd'; } });
+    if (k === 'f') for (const cc in j.byCountry) j.byCountry[cc].forEach((s, i) => { mk('path', { d: s.d, class: 'wm-fs', 'data-k': 'f', 'data-cc': cc, 'data-i': i }, g); if (s.r > 6) { const t = mk('text', { x: s.c[0], y: s.c[1], class: 'wm-lb s', 'text-anchor': 'middle' }, lg); t.textContent = s.n; t._r = s.r; t._k = 'f'; } });
+    if (k === 'r') j.rivers.forEach((r, i) => mk('path', { d: r.d, class: 'wm-rv', 'data-k': 'r', 'data-i': i }, g));
+    labels();
+  } catch { loaded[k] = undefined; msg('Could not load ' + LAYERS[k].file, true); }
+}
+function layers() {
+  for (const k in LAYERS) {
+    const on = $('ly-' + k).checked && view.w < LAYERS[k].max;
+    vis[k] = on; $(LAYERS[k].g).style.display = on ? '' : 'none';
+    if (on && world) loadLayer(k);
+  }
+}
+for (const k in LAYERS) $('ly-' + k).onchange = () => { layers(); labels(); };
+
 // ---------- world ----------
 function mk(tag, attrs, parent) { const el = document.createElementNS(NS, tag); for (const k in attrs) el.setAttribute(k, attrs[k]); parent?.appendChild(el); return el; }
 async function init() {
@@ -134,10 +171,12 @@ async function init() {
   renderUser(); apply();
 }
 function labels() {
-  const hideC = view.w > W * 0.99 && false;
   for (const t of $('wm-labels').children) {
-    const px = t._r * scale;
-    t.style.display = t._k === 'c' ? (px > 58 && !(view.w < 500 && false) ? '' : 'none') : (px > 46 && view.w < 900 ? '' : 'none');
+    const px = t._r * scale, k = t._k;
+    t.style.display = (k === 'c' ? px > 58
+      : k === 's' ? px > 46 && view.w < 900
+      : k === 'f' ? vis.f && px > 46
+      : vis.d && px > 40) ? '' : 'none';
   }
 }
 
@@ -192,11 +231,41 @@ function infoUser(f, del) {
   ${f.ai ? '<div class="wm-muted">Drawn by AI. Outline is approximate, check before publishing.</div>' : ''}
   ${del ? '<button id="wm-del" type="button">Delete</button>' : ''}`;
 }
+const OFFICIAL = '<div class="wm-muted">Official boundary data.</div>';
 function infoFor(el) {
   const k = el?.dataset?.k; if (!k) return '';
+  if (k === 'd') { const d = loaded.d.districts[+el.dataset.i]; return `<div class="wm-it">${esc(d.n)}</div><div class="wm-is">District of ${esc(d.s)}</div><dl><dt>Census code</dt><dd>${esc(d.code)}</dd></dl><div class="wm-muted">Census 2011 boundary. Districts created later are not shown.</div>`; }
+  if (k === 'f') { const s = loaded.f.byCountry[el.dataset.cc][+el.dataset.i], c = world.countries.find((x) => x.id === el.dataset.cc); return `<div class="wm-it">${esc(s.n)}</div><div class="wm-is">${esc(s.t || 'State / province')}${c ? ' of ' + esc(c.n) : ''}</div>${OFFICIAL}`; }
+  if (k === 'r') { const r = loaded.r.rivers[+el.dataset.i]; return `<div class="wm-it">${esc(r.n)}</div><div class="wm-is">River</div>${OFFICIAL}`; }
   if (k === 'c') return infoCountry(world.countries[+el.dataset.i]);
   if (k === 's') return infoState(world.india[+el.dataset.i]);
   const f = feats.find((x) => x.id === el.dataset.id); return f ? infoUser(f, false) : '';
+}
+
+// Turn an official shape into an editable item (for chapter maps).
+function ringOf(d) {
+  let best = null;
+  for (const part of d.split('M').slice(1)) {
+    const n = (part.match(/-?\d+(?:\.\d+)?/g) || []).map(Number), pts = [];
+    for (let i = 0; i + 1 < n.length; i += 2) pts.push([+x2lon(n[i]).toFixed(3), +y2lat(n[i + 1]).toFixed(3)]);
+    const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]), a = (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys));
+    if (!best || a > best.a) best = { a, pts };
+  }
+  return best?.pts ?? [];
+}
+function showInfo(el) {
+  const k = el.dataset.k, html = infoFor(el);
+  $('wm-info').innerHTML = html + (['c', 's', 'd', 'f', 'r'].includes(k) ? '<button id="wm-adopt" type="button">Use as chapter shape</button>' : '');
+  const b = $('wm-adopt'); if (!b) return;
+  b.onclick = () => {
+    const i = +el.dataset.i; let kind, name, parent = '', d;
+    if (k === 'c') { const c = world.countries[i]; kind = 'area'; name = c.n; parent = c.cont; d = c.d; }
+    else if (k === 's') { const s = world.india[i]; kind = 'state'; name = s.n; parent = 'India'; d = s.d; }
+    else if (k === 'd') { const x = loaded.d.districts[i]; kind = 'district'; name = x.n; parent = x.s + ', India'; d = x.d; }
+    else if (k === 'f') { const x = loaded.f.byCountry[el.dataset.cc][i]; kind = 'state'; name = x.n; parent = world.countries.find((c) => c.id === el.dataset.cc)?.n || ''; d = x.d; }
+    else { const x = loaded.r.rivers[i]; kind = 'river'; name = x.n; d = x.d; }
+    const f = addFeature({ kind, name, parent, note: 'Official boundary.', coords: ringOf(d) }); select(f.id); msg('Added to your items.');
+  };
 }
 
 // ---------- drawing ----------
@@ -269,7 +338,7 @@ svg.addEventListener('pointerup', (e) => {
     const p = toSvg(e); draft.push([+x2lon(p.x).toFixed(3), +y2lat(p.y).toFixed(3)]); drawDraft(); return;
   }
   if (el?.dataset.k === 'u') select(el.dataset.id);
-  else if (el) { sel = null; renderUser(); $('wm-info').innerHTML = infoFor(el); }
+  else if (el) { sel = null; renderUser(); showInfo(el); }
 });
 svg.addEventListener('dblclick', (e) => { if (['state', 'district', 'area', 'river'].includes(tool) && $('wm-form').hidden) { draft.pop(); finish(); } });
 svg.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e.deltaY > 0 ? 1.18 : 1 / 1.18, e); }, { passive: false });
@@ -324,7 +393,7 @@ $('wm-key').onclick = () => {
 };
 const SYS = `You are a careful cartographer for an educational world map. Reply with ONLY JSON:
 {"features":[{"kind":"state"|"district"|"area"|"river","name":string,"parent":string,"note":string,"coords":[[lon,lat],...]}],"error":string?}
-Rules: WGS84 degrees, [lon,lat] order. Polygons: ring without repeating the first point, 10-70 vertices, following the real boundary as closely as you can; neighbouring regions must reuse the same vertices on shared borders so they fit together. Rivers: ordered source to mouth, 15-90 points, following the real course. "parent" = the country (districts: "State, Country"). "note" = one factual sentence under 25 words. Use the usual English names. Do not invent places; if unsure or the request is not about geography return {"features":[],"error":"reason"}. India's states already exist on the map: for India draw districts, rivers or areas, not states, unless asked. Maximum 40 features.`;
+Rules: WGS84 degrees, [lon,lat] order. Polygons: ring without repeating the first point, 10-70 vertices, following the real boundary as closely as you can; neighbouring regions must reuse the same vertices on shared borders so they fit together. Rivers: ordered source to mouth, 15-90 points, following the real course. "parent" = the country (districts: "State, Country"). "note" = one factual sentence under 25 words. Use the usual English names. Do not invent places; if unsure or the request is not about geography return {"features":[],"error":"reason"}. Official data is ALREADY on the map: all countries, all states/provinces of the world, India's districts (Census 2011) and the main rivers. Never redraw those. Only draw what the map lacks: historical or custom regions (e.g. an empire's extent in a given year), natural areas (plateaus, lakes, deserts), districts outside India, and minor rivers. If the request is for something already on the map, return {"features":[],"error":"Already on the map: hover it, or click it and press Use as chapter shape"}. Maximum 40 features.`;
 async function run() {
   const cmd = $('wm-cmd').value.trim(), key = localStorage.getItem('vn-gemini-key');
   if (!cmd) return; if (!key) { msg('Add your Gemini key first (Key button).', true); return; }
@@ -390,6 +459,15 @@ setTool('pan'); renderUser(); init();
   .wm-lb { pointer-events: none; fill: var(--ink); paint-order: stroke; stroke: var(--bg); stroke-linejoin: round; font-family: var(--font-ui); }
   .wm-lb.c { font-size: calc(11px * var(--px)); stroke-width: calc(3px * var(--px)); font-weight: 600; }
   .wm-lb.s { font-size: calc(10px * var(--px)); stroke-width: calc(3px * var(--px)); fill: var(--ink-muted); }
+  .wm-di { fill: transparent; stroke: var(--ink-muted); stroke-width: .5px; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+  .wm-di:hover { fill: var(--saffron-light); stroke: var(--saffron); stroke-width: 1.4px; }
+  .wm-fs { fill: transparent; stroke: var(--ink-faint); stroke-width: .6px; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+  .wm-fs:hover { fill: var(--saffron-light); stroke: var(--saffron); stroke-width: 1.4px; }
+  .wm-rv { fill: none; stroke: #1F5FBF; stroke-width: 1.1px; vector-effect: non-scaling-stroke; pointer-events: stroke; opacity: .85; stroke-linecap: round; }
+  .wm-rv:hover { stroke-width: 2.6px; opacity: 1; }
+  .wm-lb.d { font-size: calc(9px * var(--px)); stroke-width: calc(2.5px * var(--px)); fill: var(--ink-muted); }
+  .wm-layers { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--ink-muted); }
+  .wm-layers label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
   .wm-dr { fill: var(--saffron); fill-opacity: .2; stroke: var(--saffron); stroke-width: 2px; vector-effect: non-scaling-stroke; stroke-dasharray: 6 4; pointer-events: none; }
   .wm-dv { fill: #fff; stroke: var(--saffron); stroke-width: 2px; vector-effect: non-scaling-stroke; pointer-events: none; }
   .wm-tip { position: absolute; z-index: 5; width: 250px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); box-shadow: 0 4px 14px rgba(0,0,0,.18); pointer-events: none; font-size: 13px; line-height: 1.45; }
