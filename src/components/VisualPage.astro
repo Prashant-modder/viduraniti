@@ -2,6 +2,7 @@
 // src/components/VisualPage.astro
 import Prose from './Prose.astro';
 import { renderInline } from '@/lib/md';
+import world from '../../public/data/world.json';
 
 /*
   One component for the three data-set pages. `kind` decides what is drawn.
@@ -21,6 +22,10 @@ import { renderInline } from '@/lib/md';
             Places with lat/lng are drawn as numbered markers on a simple SVG map (approximate India outline,
             zoomed to fit the places). The numbers match the list below the map. Places without lat/lng
             (regions, foreign powers) appear in the list only.
+            Optional: export const features = [{ kind: 'state'|'district'|'area'|'river', name, parent?, note?, coords: [[lon,lat],...] }]
+            (made on /map with the "Chapter file" button) are drawn as shapes and rivers with hover cards.
+            Optional: export const view = [west, south, east, north] to fix the map frame.
+            Backdrop: real country outlines and India's states from /public/data/world.json.
 */
 interface Props { data: any; kind: 'map' | 'timeline' | 'chart' }
 const { data, kind } = Astro.props;
@@ -60,26 +65,35 @@ for (const p of places) {
   groups.set(label, [...(groups.get(label) ?? []), p]);
 }
 
-// Simplified India outline as [lat, lng]. Schematic only, not survey-accurate.
-const OUTLINE: [number, number][] = [
-  [34.5, 74], [32.5, 78.5], [30, 81], [28, 84], [27.5, 88.5], [27, 92], [28, 96.5], [25, 93], [22, 92.5],
-  [21.5, 89], [20, 87], [17, 82.5], [13, 80.3], [10, 79.8], [8.1, 77.5], [10, 76.3], [15, 74], [19, 72.8],
-  [21, 72.5], [22.5, 69], [24.5, 68.5], [26, 70], [28, 70], [30, 71.5], [32, 74.5],
-];
+const FEAT_LABEL: Record<string, string> = { state: 'States', district: 'Districts', area: 'Areas', river: 'Rivers' };
+const feats: any[] = (data?.features ?? []).filter((f: any) => Array.isArray(f.coords) && f.coords.length >= 2);
+const fgroups = new Map<string, any[]>();
+for (const f of feats) fgroups.set(FEAT_LABEL[f.kind] ?? 'Features', [...(fgroups.get(FEAT_LABEL[f.kind] ?? 'Features') ?? []), f]);
 
-const W = 600;
-let H = 0, outlinePath = '';
+// Same projection as /map: 10 units per degree.
+const lonX = (l: number) => (l + 180) * 10, latY = (a: number) => (90 - a) * 10;
+let vb: number[] = [0, 0, 0, 0], K = 1;
+let bgCountries: any[] = [], bgStates: any[] = [];
 let pts: { p: any; n: number; x: number; y: number }[] = [];
-if (kind === 'map' && geo.length > 0) {
+let fpaths: { f: any; d: string }[] = [];
+if (kind === 'map' && (geo.length > 0 || feats.length > 0)) {
+  const all: number[][] = [...geo.map((p) => [p.lng, p.lat]), ...feats.flatMap((f) => f.coords)];
+  const v = data?.view;
   const PAD = 1.2;
-  const minLat = Math.min(...geo.map((p) => p.lat)) - PAD, maxLat = Math.max(...geo.map((p) => p.lat)) + PAD;
-  const minLng = Math.min(...geo.map((p) => p.lng)) - PAD, maxLng = Math.max(...geo.map((p) => p.lng)) + PAD;
-  const s = W / (maxLng - minLng);
-  H = Math.round((maxLat - minLat) * s);
-  const X = (lng: number) => ((lng - minLng) * s).toFixed(1);
-  const Y = (lat: number) => ((maxLat - lat) * s).toFixed(1);
-  outlinePath = 'M' + OUTLINE.map(([la, lo]) => `${X(lo)} ${Y(la)}`).join('L') + 'Z';
-  pts = geo.map((p) => ({ p, n: num.get(p)!, x: Number(X(p.lng)), y: Number(Y(p.lat)) }));
+  const w0 = v ? v[0] : Math.min(...all.map((q) => q[0])) - PAD, e0 = v ? v[2] : Math.max(...all.map((q) => q[0])) + PAD;
+  const s0 = v ? v[1] : Math.min(...all.map((q) => q[1])) - PAD, n0 = v ? v[3] : Math.max(...all.map((q) => q[1])) + PAD;
+  const x0 = lonX(w0), x1 = lonX(e0), y0 = latY(n0), y1 = latY(s0);
+  vb = [x0, y0, x1 - x0, y1 - y0];
+  K = (x1 - x0) / 600; // keeps markers about 10px whatever the zoom
+  const hit = (b: number[]) => b[2] >= x0 && b[0] <= x1 && b[3] >= y0 && b[1] <= y1;
+  bgCountries = (world as any).countries.filter((c: any) => c.id !== 'IND' && hit(c.b));
+  const ind = (world as any).countries.find((c: any) => c.id === 'IND');
+  if (ind && hit(ind.b)) bgStates = (world as any).india;
+  pts = geo.map((p) => ({ p, n: num.get(p)!, x: lonX(p.lng), y: latY(p.lat) }));
+  fpaths = feats.map((f) => ({
+    f,
+    d: 'M' + f.coords.map((c: number[]) => `${lonX(c[0]).toFixed(1)} ${latY(c[1]).toFixed(1)}`).join('L') + (f.kind === 'river' ? '' : 'Z'),
+  }));
 }
 ---
 
@@ -156,20 +170,22 @@ if (kind === 'map' && geo.length > 0) {
   <>
     {data?.description && <p class="mp-desc">{data.description}</p>}
 
-    {pts.length > 0 ? (
+    {(pts.length > 0 || fpaths.length > 0) ? (
       <figure class="mp-fig">
-        <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={data?.description ?? data?.meta?.title ?? 'Map'} class="mp-svg">
-          <rect width={W} height={H} class="mp-sea" />
-          <path d={outlinePath} class="mp-land" />
+        <svg viewBox={vb.join(' ')} role="img" aria-label={data?.description ?? data?.meta?.title ?? 'Map'} class="mp-svg" style={`--k:${K}`}>
+          <rect x={vb[0]} y={vb[1]} width={vb[2]} height={vb[3]} class="mp-sea" />
+          {bgCountries.map((c) => <path d={c.d} class="mb" data-name={c.n} data-kind="Country" />)}
+          {bgStates.map((st) => <path d={st.d} class="mb st" data-name={st.n} data-kind={`${st.type ?? 'State'} of India`} />)}
+          {fpaths.map(({ f }, i) => <path d={fpaths[i].d} class={`mf f-${f.kind}`} data-name={f.name} data-kind={FEAT_LABEL[f.kind]?.replace(/s$/, '') ?? 'Feature'} data-note={[f.parent, f.note].filter(Boolean).join(' · ')} />)}
           {pts.map((m) => (
-            <g class={`mk k-${m.p.kind ?? 'place'}`} transform={`translate(${m.x} ${m.y})`} data-name={m.p.name} data-kind={KIND_LABEL[m.p.kind] ?? 'Place'} data-note={m.p.note ?? ''} data-lat={m.p.lat} data-lng={m.p.lng}>
+            <g class={`mk k-${m.p.kind ?? 'place'}`} transform={`translate(${m.x} ${m.y}) scale(${K})`} data-name={m.p.name} data-kind={KIND_LABEL[m.p.kind] ?? 'Place'} data-note={m.p.note ?? ''} data-lat={m.p.lat} data-lng={m.p.lng}>
               <circle r="10" />
               <text y="3.5" text-anchor="middle">{m.n}</text>
             </g>
           ))}
         </svg>
         <div class="mp-tip" hidden></div>
-        <figcaption class="mp-cap">Schematic map with an approximate coastline. Hover a marker for details. Numbers match the list below. For the full world map, open <a href="/map">/map</a>.</figcaption>
+        <figcaption class="mp-cap">Outlines are simplified (Natural Earth). Hover a marker or shape for details. Numbers match the list below. For the full world map, open <a href="/map">/map</a>.</figcaption>
       </figure>
     ) : (
       <div class="mp-soon">
@@ -190,6 +206,15 @@ if (kind === 'map' && geo.length > 0) {
         </ul>
       </section>
     ))}
+
+    {[...fgroups].map(([label, items]) => (
+      <section class="mp-group">
+        <h2 class="mp-group-title">{label}</h2>
+        <ul class="mp-places">
+          {items.map((f) => <li><b>{f.name}</b>{(f.parent || f.note) && <span class="mp-note"> {[f.parent, f.note].filter(Boolean).join(' · ')}</span>}</li>)}
+        </ul>
+      </section>
+    ))}
   </>
 )}
 
@@ -197,10 +222,10 @@ if (kind === 'map' && geo.length > 0) {
   document.querySelectorAll<HTMLElement>('.mp-fig').forEach((fig) => {
     const tip = fig.querySelector<HTMLElement>('.mp-tip')!;
     fig.addEventListener('pointermove', (e) => {
-      const g = (e.target as Element).closest<SVGElement>('.mk');
+      const g = (e.target as Element).closest<SVGElement>('.mk, .mf, .mb');
       if (!g) { tip.hidden = true; return; }
       const d = g.dataset, r = fig.getBoundingClientRect();
-      tip.innerHTML = `<b>${d.name}</b><span>${d.kind}</span>${d.note ? `<p>${d.note}</p>` : ''}<small>${Number(d.lat).toFixed(2)}°N, ${Number(d.lng).toFixed(2)}°E</small>`;
+      tip.innerHTML = `<b>${d.name}</b><span>${d.kind}</span>${d.note ? `<p>${d.note}</p>` : ''}${d.lat ? `<small>${Number(d.lat).toFixed(2)}°N, ${Number(d.lng).toFixed(2)}°E</small>` : ''}`;
       tip.hidden = false;
       tip.style.left = Math.min(e.clientX - r.left + 14, r.width - tip.offsetWidth - 4) + 'px';
       tip.style.top = Math.max(e.clientY - r.top - tip.offsetHeight - 10, 4) + 'px';
@@ -248,7 +273,15 @@ if (kind === 'map' && geo.length > 0) {
   .mk:hover circle { stroke: var(--saffron); stroke-width: 3px; }
   .mp-svg { display: block; width: 100%; height: auto; border: 1px solid var(--border); border-radius: 12px; }
   .mp-sea { fill: var(--surface-2); }
-  .mp-land { fill: var(--bg); stroke: var(--ink-faint); stroke-width: 1.5; stroke-linejoin: round; }
+  .mb { fill: var(--bg); stroke: var(--ink-faint); stroke-width: 1px; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+  .mb.st { fill: var(--surface); stroke: var(--ink-muted); stroke-width: .8px; }
+  .mb:hover { fill: var(--saffron-light); }
+  .mf { vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; fill-opacity: .3; stroke-width: 1.6px; }
+  .mf:hover { fill-opacity: .55; stroke-width: 2.6px; }
+  .mf.f-state { fill: var(--green); stroke: var(--green); }
+  .mf.f-district { fill: var(--saffron); stroke: var(--saffron); }
+  .mf.f-area { fill: #8A5A9E; stroke: #8A5A9E; }
+  .mf.f-river { fill: none; stroke: #1F5FBF; stroke-width: 2.4px; pointer-events: stroke; }
   .mp-cap { margin-top: 6px; font-family: var(--font-ui); font-size: 12px; color: var(--ink-faint); }
   .mk circle { stroke: var(--bg); stroke-width: 2; fill: var(--ink-muted); }
   .mk text { fill: #fff; font-family: var(--font-ui); font-size: 10px; font-weight: 600; pointer-events: none; }

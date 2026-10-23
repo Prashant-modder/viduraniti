@@ -56,6 +56,7 @@
     <div id="wm-list" class="wm-list"></div>
     <div class="wm-row wrap">
       <button id="wm-export" type="button">Export</button>
+      <button id="wm-chapter" type="button" title="Download a chapter map data file (maps/*.js)">Chapter file</button>
       <button id="wm-import" type="button">Import</button>
       <button id="wm-clear-ai" type="button">Clear AI</button>
       <button id="wm-clear" type="button">Clear all</button>
@@ -289,6 +290,13 @@ $('wm-export').onclick = () => {
   const gj = { type: 'FeatureCollection', features: feats.map((f) => ({ type: 'Feature', properties: { kind: f.kind, name: f.name, parent: f.parent, note: f.note, ai: !!f.ai }, geometry: f.kind === 'river' ? { type: 'LineString', coordinates: f.coords } : { type: 'Polygon', coordinates: [[...f.coords, f.coords[0]]] } })) };
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(gj, null, 1)], { type: 'application/geo+json' })); a.download = 'viduraniti-map.geojson'; a.click();
 };
+$('wm-chapter').onclick = () => {
+  const title = prompt('Map title (for the chapter maps folder):', ''); if (title === null) return;
+  const data = feats.map((f) => ({ kind: f.kind, name: f.name, parent: f.parent || undefined, note: f.note || undefined, coords: f.coords }));
+  const js = `export const meta = { title: ${JSON.stringify(title || 'Map')}, status: "draft" };\nexport const description = "";\n\nexport const places = [];\n\nexport const features = ${JSON.stringify(data, null, 2)};\n`;
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([js], { type: 'text/javascript' }));
+  a.download = ((title || 'map').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'map') + '.js'; a.click();
+};
 $('wm-import').onclick = () => $('wm-file').click();
 $('wm-file').onchange = async (e) => {
   try {
@@ -306,9 +314,13 @@ $('wm-clear').onclick = () => { if (confirm('Delete everything you drew?')) { fe
 
 // ---------- Gemini ----------
 const msg = (t, err) => { const m = $('wm-msg'); m.textContent = t; m.classList.toggle('err', !!err); };
+const DEFAULT_MODEL = 'gemini-3.8-flash';
 $('wm-key').onclick = () => {
   const k = prompt('Gemini API key (kept only in this browser):', localStorage.getItem('vn-gemini-key') || '');
-  if (k !== null) { try { localStorage.setItem('vn-gemini-key', k.trim()); } catch {} msg(k.trim() ? 'Key saved.' : 'Key removed.'); }
+  if (k === null) return;
+  const m = prompt('Gemini model (change this if Google retires it):', localStorage.getItem('vn-gemini-model') || DEFAULT_MODEL);
+  try { localStorage.setItem('vn-gemini-key', k.trim()); if (m !== null) localStorage.setItem('vn-gemini-model', m.trim() || DEFAULT_MODEL); } catch {}
+  msg(k.trim() ? 'Saved.' : 'Key removed.');
 };
 const SYS = `You are a careful cartographer for an educational world map. Reply with ONLY JSON:
 {"features":[{"kind":"state"|"district"|"area"|"river","name":string,"parent":string,"note":string,"coords":[[lon,lat],...]}],"error":string?}
@@ -319,7 +331,7 @@ async function run() {
   const h = (view.w * ch) / cw, b = [x2lon(view.cx - view.w / 2), y2lat(view.cy + h / 2), x2lon(view.cx + view.w / 2), y2lat(view.cy - h / 2)].map((v) => +v.toFixed(1));
   $('wm-run').disabled = true; msg('Generating…');
   try {
-    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + (localStorage.getItem('vn-gemini-model') || DEFAULT_MODEL) + ':generateContent', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify({ systemInstruction: { parts: [{ text: SYS }] }, contents: [{ role: 'user', parts: [{ text: `${cmd}\n\nCurrent view (west, south, east, north): ${b.join(', ')}\nAlready drawn: ${feats.slice(-40).map((f) => f.name).join(', ') || 'nothing'}` }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.2 } }),
     });

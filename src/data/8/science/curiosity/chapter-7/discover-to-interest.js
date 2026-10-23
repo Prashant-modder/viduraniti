@@ -1,4 +1,4 @@
-export const meta = { title: "Let Us Interest", order: 4, tags: ["Links", "Further reading"] };
+export const meta = { title: "Discover to Interest", order: 4, tags: ["Links", "Further reading"] };
 
 export const sections = [
   {
