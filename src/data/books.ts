@@ -23,7 +23,7 @@ const CLASS_1_2: BookMap = {
   mathematics: b('santoor', 'Santoor'),
   hindi: b('sarangi', 'Sarangi'),
   urdu: b('shahnai', 'Shahnai'),
-};
+}; //4 books {8 books in total for classes 1 and 2}
 
 const CLASS_3_5: BookMap = {
   english: b('santoor', 'Santoor'),
@@ -33,7 +33,7 @@ const CLASS_3_5: BookMap = {
   'physical-education': b('khela-yoga', 'Khela Yoga'),
   arts: b('bansuri-i', 'Bansuri-I'),
   twau: b('our-wondrous-world', 'Our Wondrous World'),
-};
+}; //7 books {21 books in total for classes 3 and 5}
 
 const CLASS_6_8: BookMap = {
   english: b('poorvi', 'Poorvi'),
@@ -46,7 +46,7 @@ const CLASS_6_8: BookMap = {
   sanskrit: b('deepkam', 'Deepkam'),
   science: b('curiosity', 'Curiosity'),
   'vocational-education': b('kaushal-bodh', 'Kaushal Bodh'),
-};
+}; //10 books {30 books in total for classes 6 and 8}
 
 const CLASS_9_10: BookMap = {
   english: b('kaveri', 'Kaveri'),
@@ -59,7 +59,7 @@ const CLASS_9_10: BookMap = {
   sanskrit: b('sharda', 'Sharda'),
   science: b('exploration', 'Exploration'),
   'skill-education': b('kaushal-vikas', 'Kaushal Vikas'),
-};
+}; //10 books {20 books in total for classes 9 and 10}
 
 export const BOOKS: Record<string, BookMap> = {
   '1': CLASS_1_2, '2': CLASS_1_2,
