@@ -191,7 +191,12 @@ else {
 
           {pt === 'textbook' && <TextbookPage data={resolveContent(pageMod, images)} />}
           {pt === 'exam-notes' && <ExamNotesPage data={pageMod} />}
-          {pt === 'summary' && <SummaryPage data={pageMod} base={chapterBase} />}
+          {pt === 'summary' && (
+  <SummaryPage
+    data={resolveContent(pageMod, images)}
+    base={chapterBase}
+  />
+)}
           {pt === 'glossary' && (
             <GlossaryPage
               terms={kind === 'book' ? bookTerms : (pageMod?.terms ?? [])}
