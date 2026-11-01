@@ -29,13 +29,17 @@
   <div class="wm-stage" id="wm-stage">
     <svg id="wm-svg" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="World map">
       <rect class="wm-sea" x="-5000" y="-5000" width="13600" height="11800" />
-      <g id="wm-countries"></g>
-      <g id="wm-instates"></g>
-      <g id="wm-fstates"></g>
-      <g id="wm-districts"></g>
-      <g id="wm-rivers"></g>
-      <g id="wm-user"></g>
-      <g id="wm-labels"></g>
+      <g id="wm-w">
+        <g id="wm-countries"></g>
+        <g id="wm-instates"></g>
+        <g id="wm-fstates"></g>
+        <g id="wm-districts"></g>
+        <g id="wm-rivers"></g>
+        <g id="wm-user"></g>
+        <g id="wm-labels"></g>
+      </g>
+      <use href="#wm-w" transform="translate(-3600 0)" pointer-events="none" />
+      <use href="#wm-w" transform="translate(3600 0)" pointer-events="none" />
       <g id="wm-draft"></g>
     </svg>
     <div id="wm-tip" class="wm-tip" hidden></div>
@@ -67,6 +71,7 @@
       <button id="wm-export" type="button">Export</button>
       <button id="wm-chapter" type="button" title="Download a chapter map data file (maps/*.js)">Chapter file</button>
       <button id="wm-import" type="button">Import</button>
+      <button id="wm-logs" type="button" title="Download all research logs">Logs</button>
       <button id="wm-clear-ai" type="button">Clear AI</button>
       <button id="wm-clear" type="button">Clear all</button>
       <input id="wm-file" type="file" accept=".json,.geojson" hidden />
@@ -81,6 +86,7 @@ const svg = $('wm-svg'), stage = $('wm-stage'), tip = $('wm-tip');
 const NS = 'http://www.w3.org/2000/svg';
 const W = 3600, H = 1800;
 const lon2x = (l) => (l + 180) * 10, lat2y = (a) => (90 - a) * 10;
+const wl = (l) => ((((l + 540) % 360) + 360) % 360) - 180;
 const x2lon = (x) => x / 10 - 180, y2lat = (y) => 90 - y / 10;
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const KIND = { state: 'State', district: 'District', area: 'Area', river: 'River' };
@@ -107,7 +113,7 @@ function apply() {
   size();
   view.w = Math.min(Math.max(view.w, 12), Math.max(W, (H * cw) / ch));
   const h = (view.w * ch) / cw;
-  view.cx = Math.min(Math.max(view.cx, 0), W); view.cy = Math.min(Math.max(view.cy, 0), H);
+  view.cx = ((view.cx % W) + W) % W; view.cy = Math.min(Math.max(view.cy, 0), H);
   scale = cw / view.w;
   svg.setAttribute('viewBox', `${view.cx - view.w / 2} ${view.cy - h / 2} ${view.w} ${h}`);
   svg.style.setProperty('--px', String(1 / scale));
@@ -267,7 +273,42 @@ function renderUser() {
 }
 function addFeature(f) { f.id = f.id || 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); if (f.ai && !f.flags) f.flags = check(f); feats.push(f); save(); renderUser(); return f; }
 function select(id) { sel = id; renderUser(); const f = feats.find((x) => x.id === id); $('wm-info').innerHTML = f ? infoUser(f, true) : ''; wireDel(); }
-function wireDel() { const b = document.getElementById('wm-del'); if (b) b.onclick = () => { feats = feats.filter((x) => x.id !== sel); sel = null; save(); renderUser(); $('wm-info').innerHTML = '<div class="wm-muted">Deleted.</div>'; }; }
+// Replace a drawn shape by the official districts (or states) that lie mostly inside it.
+async function regionize(f, level) {
+  msg('Loading boundaries…'); await Promise.all([loadLayer('d'), loadLayer('f')]);
+  const P = new Path2D(dOf(ringsOf(f))), cx = document.createElement('canvas').getContext('2d'), bb = bboxOf(f), cands = [];
+  if (level === 'district') (loaded.d?.districts || []).forEach((d) => cands.push({ id: 'd' + d.code + d.n, d: d.d }));
+  else { world.india.forEach((x) => cands.push({ id: 's' + x.n, d: x.d })); for (const cc in loaded.f?.byCountry || {}) loaded.f.byCountry[cc].forEach((x) => cands.push({ id: 'f' + cc + x.n, d: x.d })); }
+  const rings = []; let n = 0;
+  for (const k of cands) {
+    const rs = R(k.id, k.d), q = bboxRings(rs);
+    if (q[2] < bb[0] || q[0] > bb[2] || q[3] < bb[1] || q[1] > bb[3]) continue;
+    let tot = 0, hit = 0;
+    for (const r of rs) { const st = Math.max(1, Math.floor(r.length / 20)); for (let i = 0; i < r.length; i += st) { tot++; if (cx.isPointInPath(P, lon2x(r[i][0]), lat2y(r[i][1]))) hit++; } }
+    if (tot && hit / tot >= 0.5) { rings.push(...rs); n++; }
+  }
+  if (!n) { msg('No ' + level + ' lies mostly inside this shape.', true); return; }
+  f.rings = rings; f.coords = rings.slice().sort((a, b) => ringArea(b) - ringArea(a))[0];
+  f.method = (f.method ? f.method + ' · ' : '') + `snapped to ${n} ${level}${n > 1 ? 's' : ''}`;
+  save(); renderUser(); select(f.id); fit(bboxOf(f)); msg(`Snapped to ${n} ${level}${n > 1 ? 's' : ''}. Parts outside the official data were dropped.`);
+}
+function showLog(id) {
+  let l = []; try { l = JSON.parse(localStorage.getItem('vn-map-logs') || '[]'); } catch {}
+  const g = l.find((x) => x.id === id); if (!g) { msg('That log was cleared.', true); return; }
+  const li = (a) => a.map((x) => `<li>${esc(x)}</li>`).join(''), lk = (a) => (a || []).filter((x) => /^https?:/.test(x.uri)).map((x) => `<a href="${esc(x.uri)}" target="_blank" rel="noopener noreferrer">${esc(x.title)}</a>`).join(' · ');
+  $('wm-info').innerHTML = `<div class="wm-it">Research log</div><div class="wm-is">${esc(g.cmd)} · ${esc(g.time)}</div>`
+    + (g.classify ? `<div class="wm-muted">Tier ${esc(g.classify.tier)} · ${esc(g.classify.subject || '')}</div>` : '')
+    + (g.passes || []).map((p, i) => `<div class="wm-ptitle" style="margin-top:8px">Pass ${i + 1}</div>` + (p.error ? `<div class="wm-flags">${esc(p.error)}</div>` : `<div class="wm-muted">${esc((p.regions || []).map((r) => r.name + (r.part === 'part' ? ' (part)' : '')).join(', '))}</div><div class="wm-muted">${lk(p.sources)}</div>`)).join('')
+    + (g.votes ? `<div class="wm-ptitle" style="margin-top:8px">Kept (needed ${g.need} vote${g.need > 1 ? 's' : ''})</div><div class="wm-muted">${esc(g.votes.filter((v) => v.votes >= g.need).map((v) => v.name + ' x' + v.votes).join(', '))}</div>` : '')
+    + (g.missing?.length ? `<div class="wm-ptitle" style="margin-top:8px">Not matched</div><div class="wm-muted">${esc(g.missing.join(', '))}</div>` : '')
+    + (g.rounds?.length ? `<div class="wm-ptitle" style="margin-top:8px">Visual checks</div><ul class="wm-steps">${li(g.rounds.map((r) => r.error || ((r.ok ? 'OK' : '') + (r.remove?.length ? ' remove: ' + r.remove.join(', ') : '') + (r.add?.length ? ' add: ' + r.add.map((a) => a.name || a).join(', ') : '') + (r.note ? ' · ' + r.note : ''))))}</ul>` : '')
+    + `<div class="wm-ptitle" style="margin-top:8px">Steps</div><ol class="wm-steps">${li(g.steps || [])}</ol>`;
+}
+function wireDel() {
+  const vl = document.getElementById('wm-viewlog'); if (vl) vl.onclick = () => { const f = feats.find((x) => x.id === sel); if (f) showLog(f.logId); };
+  const sd = document.getElementById('wm-snapd'), ss = document.getElementById('wm-snaps');
+  if (sd) sd.onclick = () => { const f = feats.find((x) => x.id === sel); if (f) regionize(f, 'district'); };
+  if (ss) ss.onclick = () => { const f = feats.find((x) => x.id === sel); if (f) regionize(f, 'state'); }; const b = document.getElementById('wm-del'); if (b) b.onclick = () => { feats = feats.filter((x) => x.id !== sel); sel = null; save(); renderUser(); $('wm-info').innerHTML = '<div class="wm-muted">Deleted.</div>'; }; }
 
 // ---------- info ----------
 function infoCountry(c) {
@@ -285,7 +326,7 @@ function infoUser(f, del) {
   ${f.sources?.length ? `<div class="wm-muted">Sources: ${f.sources.filter((x) => /^https?:/.test(x.uri)).map((x) => `<a href="${esc(x.uri)}" target="_blank" rel="noopener noreferrer">${esc(x.title)}</a>`).join(' · ')}</div>` : ''}
   ${f.flags?.length ? `<ul class="wm-flags">${f.flags.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
   ${f.ai ? '<div class="wm-muted">AI outlines are always approximate. Compare with an atlas before publishing.</div>' : ''}
-  ${del ? '<button id="wm-del" type="button">Delete</button>' : ''}`;
+  ${del ? `<div class="wm-row wrap" style="margin-top:8px">${f.kind !== 'river' && !f.ref ? '<button id="wm-snapd" type="button">Snap to districts</button><button id="wm-snaps" type="button">Snap to states</button>' : ''}${f.logId ? '<button id="wm-viewlog" type="button">Research log</button>' : ''}<button id="wm-del" type="button">Delete</button></div>` : ''}`;
 }
 const OFFICIAL = '<div class="wm-muted">Official boundary data.</div>';
 function infoFor(el) {
@@ -362,7 +403,7 @@ svg.addEventListener('pointerdown', (e) => {
   if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = Math.hypot(a.x - b.x, a.y - b.y); moved = true; }
 });
 svg.addEventListener('pointermove', (e) => {
-  const lon = x2lon(toSvg(e).x), lat = y2lat(toSvg(e).y);
+  const lon = wl(x2lon(toSvg(e).x)), lat = y2lat(toSvg(e).y);
   if (world) $('wm-status').textContent = `${lat.toFixed(2)}°, ${lon.toFixed(2)}°`;
   if (ptrs.has(e.pointerId)) {
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -391,7 +432,7 @@ svg.addEventListener('pointerup', (e) => {
   if (tool === 'erase') { if (el?.dataset.k === 'u') { feats = feats.filter((f) => f.id !== el.dataset.id); save(); renderUser(); } return; }
   if (['state', 'district', 'area', 'river'].includes(tool)) {
     if ($('wm-form').hidden === false) return;
-    const p = toSvg(e); draft.push([+x2lon(p.x).toFixed(3), +y2lat(p.y).toFixed(3)]); drawDraft(); return;
+    const p = toSvg(e); draft.push([+wl(x2lon(p.x)).toFixed(3), +y2lat(p.y).toFixed(3)]); drawDraft(); return;
   }
   if (el?.dataset.k === 'u') select(el.dataset.id);
   else if (el) { sel = null; renderUser(); showInfo(el); }
@@ -423,6 +464,7 @@ $('wm-chapter').onclick = () => {
   a.download = ((title || 'map').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'map') + '.js'; a.click();
 };
 $('wm-import').onclick = () => $('wm-file').click();
+$('wm-logs').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([localStorage.getItem('vn-map-logs') || '[]'], { type: 'application/json' })); a.download = 'viduraniti-map-logs.json'; a.click(); };
 $('wm-file').onchange = async (e) => {
   try {
     const gj = JSON.parse(await e.target.files[0].text());
@@ -444,31 +486,58 @@ $('wm-key').onclick = () => {
   const k = prompt('Gemini API key (kept only in this browser):', localStorage.getItem('vn-gemini-key') || '');
   if (k === null) return;
   const m = prompt('Gemini model (change this if Google retires it):', localStorage.getItem('vn-gemini-model') || DEFAULT_MODEL);
-  try { localStorage.setItem('vn-gemini-key', k.trim()); if (m !== null) localStorage.setItem('vn-gemini-model', m.trim() || DEFAULT_MODEL); } catch {}
+  const k2 = prompt('Second API key, used when the first is busy or out of quota (optional):', localStorage.getItem('vn-gemini-key2') || '');
+  const sm = prompt('Model for web-search steps (needs free Google Search grounding, e.g. a 2.5 Flash model). Leave empty to use the main model:', localStorage.getItem('vn-gemini-search') || '');
+  const fb = prompt('Fallback model used when the main one is busy (optional):', localStorage.getItem('vn-gemini-fallback') || '');
+  try { localStorage.setItem('vn-gemini-key', k.trim()); if (m !== null) localStorage.setItem('vn-gemini-model', m.trim() || DEFAULT_MODEL); if (fb !== null) localStorage.setItem('vn-gemini-fallback', fb.trim()); if (sm !== null) localStorage.setItem('vn-gemini-search', sm.trim()); if (k2 !== null) localStorage.setItem('vn-gemini-key2', k2.trim()); } catch {}
   msg(k.trim() ? 'Saved.' : 'Key removed.');
 };
 const SYS = `You are a careful cartographer for an educational world map. Reply with ONLY JSON:
 {"features":[{"kind":"state"|"district"|"area"|"river","name":string,"parent":string,"note":string,"conf":"high"|"medium"|"low","coords":[[lon,lat],...]}],"error":string?}
 Rules: WGS84 degrees, [lon,lat] order. Polygons: ring without repeating the first point, 10-70 vertices, following the real boundary as closely as you can; the ring must NOT cross itself. Rivers: ordered source to mouth, 15-90 points, following the real course. "parent" = the country (districts: "State, Country"). "note" = one factual sentence under 25 words. "conf" = honest confidence: "high" only if you know the real coordinates well. Use the usual English names. Do not invent places. Maximum 40 features.`;
-const CLS = `Classify a map request for an educational atlas. Reply ONLY JSON {"tier":"simple"|"medium"|"hard"|"exists","kind":"area"|"river"|"state"|"district","land":boolean,"year":number|null,"polity":string,"subject":string,"reason":string}.
-simple = one natural or minor feature (plateau, lake, desert, minor river) or any single shape with no political borders. medium = a political or cultural region at a given time that is easy to describe with modern states or districts. hard = a historical empire, or anything whose borders changed or are disputed. exists = already on the map (all countries, world states/provinces, India's states and districts, main rivers); explain in reason.
+const CLS = `Classify a map request for an educational atlas. Reply ONLY JSON {"tier":"simple"|"medium"|"hard"|"exists","kind":"area"|"river"|"state"|"district","land":boolean,"natural":boolean,"year":number|null,"polity":string,"subject":string,"reason":string}.
+simple = ONLY a river, a lake or another tiny feature. medium = a natural land region (desert, plateau, mountain range, plain, basin) or a political or cultural region at a given time that is easy to describe with modern states or districts. natural = true for geographic features such as a desert, plateau, range or plain. hard = a historical empire, or anything whose borders changed or are disputed. exists = ONLY when the request is exactly a country, a state/province, an Indian district or a major river. Deserts, plateaus, ranges, plains, lakes, historical regions and anything else are NEVER exists. Explain in reason.
 year = year the map is for (negative for BCE) or null. polity = 1-3 short comma-separated keywords of the polity's name as on historical maps (e.g. "Maurya"). subject = a clean title including the year. land = true if the shape lies on land only.`;
 const yl = (y) => (y < 0 ? `${-y} BCE` : `${y} CE`);
 
-let steps = [];
+let steps = [], cur = null;
+function saveLog() { if (!cur) return; try { const l = JSON.parse(localStorage.getItem('vn-map-logs') || '[]'); l.unshift(cur); while (l.length > 1 && JSON.stringify(l).length > 1.5e6) l.pop(); localStorage.setItem('vn-map-logs', JSON.stringify(l.slice(0, 30))); } catch {} }
 const step = (t) => { steps.push(t); $('wm-info').innerHTML = '<div class="wm-it">Working…</div><ol class="wm-steps">' + steps.map((x) => `<li>${esc(x)}</li>`).join('') + '</ol>'; msg(t); };
 
-async function gem(parts, { system, search = false, json = !search } = {}) {
-  const key = localStorage.getItem('vn-gemini-key'), model = localStorage.getItem('vn-gemini-model') || DEFAULT_MODEL;
+let gemGap = 3500, gemQ = Promise.resolve();
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+function gem(parts, opts) { const run = gemQ.then(() => gemOnce(parts, opts)); gemQ = run.catch(() => {}).then(() => sleep(gemGap)); return run; }
+async function gemOnce(parts, { system, search = false, json = !search } = {}) {
+  const keys = [localStorage.getItem('vn-gemini-key'), localStorage.getItem('vn-gemini-key2')].filter(Boolean);
+  const models = [...new Set([(search && localStorage.getItem('vn-gemini-search')) || localStorage.getItem('vn-gemini-model') || DEFAULT_MODEL, localStorage.getItem('vn-gemini-fallback')].filter(Boolean))];
   const body = { contents: [{ role: 'user', parts }], generationConfig: { temperature: 0 } };
   if (system) body.systemInstruction = { parts: [{ text: system }] };
   if (json) body.generationConfig.responseMimeType = 'application/json';
   if (search) body.tools = [{ google_search: {} }];
-  const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify(body) });
-  const j = await r.json(); if (!r.ok) throw new Error(j.error?.message || r.status);
+  // One request at a time, spaced out. Rate limits skip ahead, daily limits move to the next key/model at once.
+  let j, lastErr = '';
+  const combos = models.flatMap((m) => keys.map((k) => [m, k]));
+  outer: for (const [model, key] of combos) {
+    for (let a = 0; a < 3; a++) {
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify(body) });
+      j = await r.json().catch(() => ({}));
+      if (r.ok) { gemGap = Math.max(3500, gemGap * 0.9); break outer; }
+      lastErr = j.error?.message || String(r.status);
+      const quota = r.status === 429 || /quota|rate limit/i.test(lastErr);
+      if (!quota && ![500, 503, 504].includes(r.status) && !/demand|overload|unavailable/i.test(lastErr)) throw new Error(lastErr);
+      if (quota) gemGap = Math.min(gemGap * 1.6, 15000);
+      const hint = parseFloat((JSON.stringify(j.error?.details || '').match(/"retryDelay":"([\d.]+)s"/) || [])[1]);
+      if (/per ?day|daily/i.test(lastErr) || (quota && hint > 25) || a === 2) { step(`${model} …${key.slice(-4)}: ${lastErr.slice(0, 80)}. Trying the next key/model`); break; }
+      const w = quota ? Math.min(Math.max(hint || 8, 3), 25) : [3, 8][a];
+      step(`Gemini ${quota ? 'rate limit' : 'busy'} (${model} …${key.slice(-4)}): waiting ${w}s`); await sleep(w * 1000);
+    }
+    j = null;
+  }
+  if (!j) throw new Error(lastErr + ' (tried ' + models.join(', ') + '). Try again soon or set a fallback model with the Key button.');
   const c = j.candidates?.[0], text = (c?.content?.parts || []).map((p) => p.text || '').join('');
-  const m = text.replace(/```json|```/g, '').match(/\{[\s\S]*\}/); let data = null;
-  try { data = JSON.parse(m ? m[0] : text); } catch {}
+  const clean = text.replace(/```json|```/g, '').trim(); let data = null;
+  try { data = JSON.parse(clean); } catch { const m = clean.match(/\{[\s\S]*\}|\[[\s\S]*\]/); try { data = JSON.parse(m ? m[0] : clean); } catch {} }
+  if (Array.isArray(data)) data = { regions: data };
   const sources = (c?.groundingMetadata?.groundingChunks || []).map((g) => g.web).filter((w) => w?.uri).map((w) => ({ title: w.title || w.uri, uri: w.uri }));
   return { data, text, sources };
 }
@@ -497,15 +566,19 @@ function snap(coords, land) {
 }
 
 // ----- official regions -----
+const lev = (a, b) => { if (Math.abs(a.length - b.length) > 2) return 9; const d = Array.from({ length: a.length + 1 }, (_, i) => [i]); for (let j = 1; j <= b.length; j++) d[0][j] = j; for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); return d[a.length][b.length]; };
+const ALIAS = { kutch: 'kachchh', banaskantha: 'banas kantha', sabarkantha: 'sabar kantha', orissa: 'odisha', uttaranchal: 'uttarakhand', jalore: 'jalor', jhunjhunu: 'jhunjhunun', chittorgarh: 'chittaurgarh', sriganganagar: 'ganganagar' };
+const sq = (s) => norm(s).replace(/&/g, 'and').replace(/[^a-z]/g, '');
+const CA = { capeverde: ['caboverde'], easttimor: ['timorleste'], ivorycoast: ['cotedivoire'], burma: ['myanmar'], swaziland: ['eswatini'], czechrepublic: ['czechia'], macedonia: ['northmacedonia'], turkey: ['turkiye'], unitedstatesofamerica: ['unitedstates'], drcongo: ['democraticrepublicofthecongo'], congokinshasa: ['democraticrepublicofthecongo'], congobrazzaville: ['republicofthecongo'], persia: ['iran'], siam: ['thailand'], ceylon: ['srilanka'], holland: ['netherlands'], zaire: ['democraticrepublicofthecongo'] };
 const ringCache = new Map();
 const R = (id, d) => { if (!ringCache.has(id)) ringCache.set(id, allRings(d)); return ringCache.get(id); };
 function resolve(r) {
-  const n = norm(r.name), par = norm(String(r.parent || '').split(',')[0]), type = String(r.type || '');
+  const n0 = norm(r.name), n = ALIAS[n0] || ALIAS[sq(r.name)] || n0, sn = sq(n), par = norm(String(r.parent || '').split(',')[0]), type = String(r.type || '');
   const T = {
-    india_district: () => { const l = loaded.d?.districts || []; const x = l.find((d) => norm(d.n) === n && (!par || norm(d.s) === par)) || l.find((d) => norm(d.n) === n); return x && { id: 'd' + x.code + x.n, label: x.n + ', ' + x.s, d: x.d }; },
-    india_state: () => { const x = world.india.find((s) => norm(s.n) === n); return x && { id: 's' + x.n, label: x.n, d: x.d }; },
+    india_district: () => { const l = loaded.d?.districts || [], st = (d) => !par || norm(d.s) === par; const x = l.find((d) => norm(d.n) === n && st(d)) || l.find((d) => sq(d.n) === sn && st(d)) || l.find((d) => norm(d.n) === n) || (sn.length >= 6 && l.find((d) => st(d) && lev(sq(d.n), sn) <= 2)); return x && { id: 'd' + x.code + x.n, label: x.n + ', ' + x.s, d: x.d }; },
+    india_state: () => { const x = world.india.find((s) => norm(s.n) === n || sq(s.n) === sn) || (sn.length >= 8 && world.india.find((s) => sq(s.n).includes(sn) || sn.includes(sq(s.n)))); return x && { id: 's' + x.n, label: x.n, d: x.d }; },
     world_state: () => { const bc = loaded.f?.byCountry || {}; for (const cc in bc) { const c = world.countries.find((k) => k.id === cc); const s = bc[cc].find((s) => norm(s.n) === n && (!par || !c || norm(c.n) === par || norm(c.f) === par)); if (s) return { id: 'f' + cc + s.n, label: s.n + (c ? ', ' + c.n : ''), d: s.d }; } },
-    country: () => { const c = world.countries.find((k) => norm(k.n) === n || norm(k.f) === n); return c && { id: 'c' + c.id, label: c.n, d: c.d }; },
+    country: () => { const cand = [sn, ...(CA[sn] || [])], c = world.countries.find((k) => norm(k.n) === n || norm(k.f) === n || cand.includes(sq(k.n)) || cand.includes(sq(k.f))); return c && { id: 'c' + c.id, label: c.n, d: c.d }; },
   };
   const order = [...new Set([type, ...(type.startsWith('india') ? ['india_state', 'india_district'] : ['world_state', 'country'])])];
   for (const t of order) { const h = T[t]?.(); if (h) return { ...h, rings: R(h.id, h.d) }; }
@@ -516,9 +589,11 @@ function resolve(r) {
 function iou(A, B) {
   const b = bboxRings([...A, ...B]), dx = b[2] - b[0] || 1, dy = b[3] - b[1] || 1, w = 700, h = Math.max(50, Math.min(900, Math.round((w * dy) / dx)));
   const px = (rs) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.setTransform(w / dx, 0, 0, h / dy, (-b[0] * w) / dx, (-b[1] * h) / dy); x.fill(new Path2D(dOf(rs))); return x.getImageData(0, 0, w, h).data; };
-  const a = px(A), c = px(B); let i = 0, u = 0;
-  for (let k = 3; k < a.length; k += 4) { const p = a[k] > 127, q = c[k] > 127; if (p && q) i++; if (p || q) u++; }
-  return u ? i / u : 0;
+  const a = px(A), c = px(B); let i = 0, u = 0, pa = 0, pb = 0;
+  for (let k = 3; k < a.length; k += 4) { const p = a[k] > 127, q = c[k] > 127; if (p && q) i++; if (p || q) u++; if (p) pa++; if (q) pb++; }
+  // A small reference (e.g. only the home country of an empire) is judged by how much of it we contain.
+  iou.mode = pb < 0.4 * pa ? 'core' : 'full';
+  return iou.mode === 'core' ? (pb ? i / pb : 0) : u ? i / u : 0;
 }
 function snapshot(A, B, used) {
   let b = bboxRings([...A, ...(B || [])]); const pw = (b[2] - b[0]) * 0.08, ph = (b[3] - b[1]) * 0.08; b = [b[0] - pw, b[1] - ph, b[2] + pw, b[3] + ph];
@@ -550,12 +625,38 @@ async function repoRef(year, polity) {
   step(`Fetching repo snapshot nearest to ${yl(year)}: ${yl(f.y)}`);
   repoRef.files ??= {}; repoRef.files[f.url] ??= await (await fetch(f.url)).json();
   const keys = String(polity || '').toLowerCase().split(/[,/|]/).map((x) => x.trim()).filter(Boolean);
-  const m = repoRef.files[f.url].features.filter((ft) => { const p = ft.properties || {}, t = `${p.NAME || ''} ${p.SUBJECTO || ''} ${p.PARTOF || ''}`.toLowerCase(); return keys.some((k) => t.includes(k)); });
+  const feats0 = repoRef.files[f.url].features, fld = (ft) => ['NAME', 'SUBJECTO', 'PARTOF'].map((k) => String((ft.properties || {})[k] || '').toLowerCase().trim());
+  let m = feats0.filter((ft) => fld(ft).some((v) => keys.includes(v)));
+  if (!m.length) m = feats0.filter((ft) => fld(ft).some((v) => keys.some((k) => v.includes(k))));
   if (!m.length) { step('No matching polity in the repo snapshot'); return null; }
   const rings = [];
   for (const ft of m) { const g = ft.geometry; if (!g) continue; if (g.type === 'Polygon') rings.push(thin(g.coordinates[0], 0.05)); else if (g.type === 'MultiPolygon') for (const p of g.coordinates) rings.push(thin(p[0], 0.05)); }
   const good = rings.filter((r) => r.length >= 3);
-  return good.length ? { rings: good, name: m[0].properties.NAME || polity, year: f.y } : null;
+  return good.length ? { rings: good, name: String(polity || '').split(',')[0].trim() || m[0].properties.NAME, year: f.y } : null;
+}
+
+// ----- Wikipedia maps: find the article, read its map images -----
+async function wikiMaps(subject, keys = []) {
+  const api = 'https://en.wikipedia.org/w/api.php?format=json&origin=*&', J = async (q) => (await fetch(api + q)).json();
+  const sr = await J('action=query&list=search&srlimit=5&srsearch=' + encodeURIComponent(keys[0] || subject.replace(/\b\d{3,4}\b/g, '').trim()));
+  const words = keys.flatMap((k) => norm(k).split(' ')).filter((w) => w.length > 3 && !['empire', 'kingdom', 'republic', 'united', 'dynasty', 'ancient'].includes(w));
+  const title = (sr.query?.search || []).map((x) => x.title).find((t) => !words.length || words.some((w) => norm(t).includes(w)));
+  if (!title) return null;
+  const im = await J('action=query&prop=images&imlimit=80&titles=' + encodeURIComponent(title));
+  const names = (Object.values(im.query?.pages || {})[0]?.images || []).map((x) => x.title)
+    .filter((t) => /\.(png|svg|jpe?g)$/i.test(t) && /map|empire|extent|territor|colon|dominion/i.test(t) && !/flag|coat|icon|logo|symbol|arms|seal|wikisource|commons-logo/i.test(t)).slice(0, 3);
+  if (!names.length) return { title, images: [] };
+  const info = await J('action=query&prop=imageinfo&iiprop=url&iiurlwidth=1100&titles=' + encodeURIComponent(names.join('|')));
+  const images = [];
+  for (const p of Object.values(info.query?.pages || {})) {
+    const ii = p.imageinfo?.[0], url = ii?.thumburl || ii?.url; if (!url) continue;
+    try {
+      const r = await fetch(url); if (!r.ok) continue; const b = await r.blob(); if (b.size > 3e6) continue;
+      const data = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.readAsDataURL(b); });
+      images.push({ name: p.title, mime: b.type || 'image/png', data });
+    } catch {}
+  }
+  return { title, images };
 }
 
 // ----- pipeline -----
@@ -586,21 +687,48 @@ async function composed(c, cmd) {
   await Promise.all([loadLayer('d'), loadLayer('f')]);
   step(`Searching the web (${N} pass${N > 1 ? 'es' : ''})${c.year != null ? ' and the historical map repo' : ''}`);
   const angles = ['', 'Prefer historians\' maps and encyclopedias.', 'Prefer Wikipedia and academic atlases.'].slice(0, N);
-  const ask = (a) => `Search the web. Subject: "${c.subject || cmd}"${when}. List the modern administrative regions that were inside its territory at that time. Use the finest unit possible: Indian districts or states, or states/provinces of other countries; use a whole country only if essentially all of it was inside. Reply ONLY JSON: {"regions":[{"name":"modern English name","type":"india_district"|"india_state"|"world_state"|"country","parent":"State, Country or Country","part":"all"|"part"}]}. Max 60 regions. ${a}`;
-  const [runs, ref] = await Promise.all([
-    Promise.allSettled(angles.map((a) => gem([{ text: ask(a) }], { search: true }))),
+  const what = c.natural ? 'List the modern administrative regions (districts or states/provinces) where this natural feature mainly lies. Include a region only if the feature covers roughly half or more of it, and mark part:"part" if the feature covers less than the whole region.' : 'List the modern administrative regions that were inside its territory at that time.';
+  const unit = c.natural ? 'Use the finest unit possible: Indian districts or states, or states/provinces of other countries; use a whole country only if essentially all of it was inside.' : 'List whole modern countries when essentially all of the country was inside the territory. Use states, provinces or Indian districts only when a country was only partly inside. Be exhaustive: list every colony, dominion, protectorate, mandate and territory. Never list cities or islands; give the modern country or state that contains them instead.';
+  const ask = (a) => `Search the web. Subject: "${c.subject || cmd}"${when}. ${what} ${unit} Reply ONLY JSON: {"regions":[{"name":"modern English name","type":"india_district"|"india_state"|"world_state"|"country","parent":"State, Country or Country","part":"all"|"part"}]}. Use district names and boundaries as in the 2011 Census (for example Kachchh, Banas Kantha, Jalor). Do not use districts created after 2011; name the 2011 district they were carved from instead. Max ${hard ? 120 : 60} regions. ${a}`;
+  const research = async (a) => {
+    const p = [{ text: ask(a) }]; let r;
+    try { r = await gem(p, { search: true }); } catch (e) { step('Web search failed: ' + String(e.message).slice(0, 140)); }
+    if (!r?.data?.regions) { if (r) step('Search reply was not readable JSON'); step("Using Gemini's own knowledge instead of the web"); r = await gem(p, { search: false }); r.sources = []; }
+    return r;
+  };
+  const wikiTask = (async () => {
+    try {
+      const w = await wikiMaps(c.subject || cmd, String(c.polity || '').split(',').map((x) => x.trim()).filter(Boolean));
+      if (!w || !w.images.length) { step('Wikipedia: no map images found' + (w ? ` in "${w.title}"` : '')); return null; }
+      step(`Wikipedia "${w.title}": reading ${w.images.length} map image${w.images.length > 1 ? 's' : ''} and noting the coloured areas`);
+      const txt = `Candidate maps from the Wikipedia article "${w.title}", images 1 to ${w.images.length} in this order: ${w.images.map((i) => i.name).join(' | ')}. Subject: "${c.subject || cmd}"${when}. Pick the map that best shows this subject at that time, where the territory is highlighted in a colour against a neutral background. Notice which areas are highlighted and list the modern regions that are highlighted. ${unit} Reply ONLY JSON {"best":1-based index or null if no map fits,"regions":[{"name":"","type":"india_district"|"india_state"|"world_state"|"country","parent":"","part":"all"|"part"}],"note":""}.`;
+      const d = (await gem([{ text: txt }, ...w.images.map((i) => ({ inline_data: { mime_type: i.mime, data: i.data } }))])).data;
+      if (!d || d.best == null || !d.regions?.length) { step('Wikipedia maps do not match the subject'); return null; }
+      const img = w.images[Math.min(Math.max(+d.best - 1, 0), w.images.length - 1)];
+      step(`Wikipedia map read: ${d.regions.length} highlighted regions (${img.name})`);
+      return { regions: d.regions, img, note: d.note, sources: [{ title: 'Wikipedia: ' + w.title, uri: 'https://en.wikipedia.org/wiki/' + encodeURIComponent(w.title.replace(/ /g, '_')) }] };
+    } catch (e) { step('Wikipedia skipped: ' + String(e.message).slice(0, 100)); return null; }
+  })();
+  const [runs, ref, wk] = await Promise.all([
+    Promise.allSettled(angles.map(research)),
     c.year != null ? repoRef(c.year, c.polity).catch((e) => { step('Repo skipped: ' + e.message); return null; }) : null,
+    wikiTask,
   ]);
   const votes = new Map(); let ok = 0; const src = new Map();
-  for (const r of runs) {
-    if (r.status !== 'fulfilled' || !r.value.data?.regions) continue;
-    ok++; r.value.sources.forEach((s) => src.set(s.uri, s)); const seen = new Set();
-    for (const g of r.value.data.regions.slice(0, 80)) { const k = norm(g.name) + '|' + (g.type || ''); if (seen.has(k)) continue; seen.add(k); const v = votes.get(k) || { ...g, votes: 0 }; v.votes++; votes.set(k, v); }
+  const sets = [...runs.filter((r) => r.status === 'fulfilled').map((r) => r.value), ...(wk ? [{ data: { regions: wk.regions }, sources: wk.sources }] : [])];
+  for (const r of sets) {
+    if (!r.data?.regions) continue;
+    ok++; r.sources.forEach((s) => src.set(s.uri, s)); const seen = new Set();
+    for (const g of r.data.regions.slice(0, 150)) { const k = norm(g.name) + '|' + (g.type || ''); if (seen.has(k)) continue; seen.add(k); const v = votes.get(k) || { ...g, votes: 0 }; v.votes++; votes.set(k, v); }
   }
-  if (!ok) { step('Web research failed, tracing instead'); return simple(cmd, c); }
+  if (!ok) { step('Research failed: ' + String(runs.find((r) => r.status === 'rejected')?.reason?.message || 'unreadable reply').slice(0, 140) + '. Tracing instead'); return simple(cmd, c); }
   const need = ok >= 3 ? 2 : 1, picked = [...votes.values()].filter((v) => v.votes >= need);
+  cur.classify = c; cur.need = need;
+  cur.passes = runs.map((r) => r.status === 'fulfilled' ? { regions: r.value.data?.regions, sources: r.value.sources, raw: String(r.value.text).slice(0, 5000) } : { error: String(r.reason?.message) });
+  if (wk) cur.passes.push({ wikipedia: true, regions: wk.regions, sources: wk.sources, raw: wk.note || '' });
+  cur.votes = [...votes.values()].map((v) => ({ name: v.name, type: v.type, parent: v.parent, part: v.part, votes: v.votes }));
   step(`${ok} pass${ok > 1 ? 'es' : ''} agreed on ${picked.length} regions · ${src.size} web sources`);
-  const build = (list) => { const seen = new Set(), used = [], missing = []; for (const r of list) { const h = resolve(r); if (!h) { missing.push(r.name); continue; } if (seen.has(h.id)) continue; seen.add(h.id); used.push({ name: r.name, part: r.part, label: h.label, rings: h.rings }); } return { used, missing }; };
+  const build = (list) => { const seen = new Set(), used = [], missing = []; for (const r of list) { const h = resolve(r); if (!h) { missing.push(r.name); continue; } if (seen.has(h.id)) continue; if (c.natural && r.part === 'part' && /^[cf]/.test(h.id)) { missing.push(r.name); continue; } seen.add(h.id); used.push({ name: r.name, part: r.part, label: h.label, rings: h.rings }); } return { used, missing }; };
   let { used, missing } = build(picked);
   if (!used.length) { step('No official regions matched, tracing instead'); return simple(cmd, c); }
   const flat = () => used.flatMap((u) => u.rings);
@@ -612,7 +740,8 @@ async function composed(c, cmd) {
     step(`Visual check ${i}/${rounds}: Gemini inspects the map`);
     const img = snapshot(flat(), ref?.rings, used);
     const names = used.map((u) => u.label).slice(0, 90).join('; ');
-    const v = (await gem([{ text: `Image: RED = current shape for "${c.subject || cmd}"${when}. ${ref ? 'BLUE outline = reference shape from a historical atlas. ' : ''}Grey lines = modern borders with names. Included regions: ${names}. Judge whether RED matches the true extent at that time${ref ? ' and the blue reference' : ''}. Reply ONLY JSON {"ok":boolean,"remove":[names from the included list],"add":[{"name":"","type":"india_district"|"india_state"|"world_state"|"country","parent":""}],"note":""}. Be conservative: change only clear errors.` }, { inline_data: { mime_type: 'image/png', data: img } }])).data;
+    const v = (await gem([{ text: `Image: RED = current shape for "${c.subject || cmd}"${when}. ${ref ? 'BLUE outline = reference shape from a historical atlas. ' : ''}Grey lines = modern borders with names. Included regions: ${names}. ${wk ? 'The SECOND image is a reference map from Wikipedia (the highlighted colour is the territory). Compare which areas are highlighted there with the RED areas in the first image and fix the differences. ' : ''}Judge whether RED matches the true extent at that time${ref ? ' and the blue reference' : ''}. Reply ONLY JSON {"ok":boolean,"remove":[names from the included list],"add":[{"name":"","type":"india_district"|"india_state"|"world_state"|"country","parent":""}],"note":""}. Be conservative: change only clear errors.` }, { inline_data: { mime_type: 'image/png', data: img } }, ...(wk ? [{ inline_data: { mime_type: wk.img.mime, data: wk.img.data } }] : [])])).data;
+    (cur.rounds ??= []).push(v || { error: 'no verdict' });
     if (!v) { step('No verdict, keeping the shape'); break; }
     if (v.ok) { step('Gemini: looks right'); break; }
     const rem = new Set((v.remove || []).map((x) => norm(String(x).split(',')[0]))), before = used.length;
@@ -629,15 +758,16 @@ async function composed(c, cmd) {
   const rings = flat(), pct = score != null ? Math.round(score * 100) : null;
   const conf = score != null ? (score >= 0.75 ? 'high' : score >= 0.5 ? 'medium' : 'low') : hard ? 'low' : 'medium';
   const flags = [];
-  if (score != null && score < 0.5) flags.push(`Only ${pct}% overlap with the reference`);
-  if (missing.length > used.length * 0.2) flags.push(`Not matched to official shapes: ${missing.slice(0, 6).join(', ')}`);
+  if (score != null && score < 0.5 && iou.mode === 'full') flags.push(`Only ${pct}% overlap with the reference`);
+  if (missing.length > used.length * 0.2) flags.push(`Not covered, no matching official shape: ${missing.slice(0, 6).join(', ')}`);
   const partial = used.filter((u) => u.part === 'part').map((u) => u.label.split(',')[0]);
   const sources = [...src.values()].slice(0, 6);
+  cur.used = used.map((u) => u.label); cur.missing = missing; cur.ref = ref ? { name: ref.name, year: ref.year } : null; cur.score = score; cur.flags = flags;
   if (ref) addFeature({ kind: 'area', name: `${ref.name} (reference, ${yl(ref.year)})`, parent: '', note: 'Approximate polygon from the historical-basemaps repo.', ref: true, coords: ref.rings.slice().sort((a, b) => ringArea(b) - ringArea(a))[0], rings: ref.rings });
   const f = addFeature({
-    kind: c.kind === 'river' ? 'area' : (KIND[c.kind] ? c.kind : 'area'), name: c.subject || cmd, parent: '', ai: true, conf, flags, sources,
+    kind: c.kind === 'river' ? 'area' : (KIND[c.kind] ? c.kind : 'area'), name: c.subject || cmd, parent: '', ai: true, conf, flags, sources, logId: cur.id,
     note: `Built from ${used.length} modern regions.${partial.length ? ' Only part of these was inside, whole region shown: ' + partial.slice(0, 8).join(', ') + '.' : ''}`,
-    method: `Official regions · ${ok} web pass${ok > 1 ? 'es' : ''}${pct != null ? ` · ${pct}% match with ${ref.name} (${yl(ref.year)})` : ''}`,
+    method: `Official regions · ${ok} web pass${ok > 1 ? 'es' : ''}${pct != null ? ` · ${pct}% ${iou.mode === 'core' ? 'of the reference core (small polygon) is inside' : 'match with'} ${ref.name} (${yl(ref.year)})` : ''}`,
     coords: rings.slice().sort((a, b) => ringArea(b) - ringArea(a))[0], rings,
   });
   fit(bboxOf(f)); select(f.id);
@@ -648,15 +778,20 @@ async function run() {
   const cmd = $('wm-cmd').value.trim(), key = localStorage.getItem('vn-gemini-key');
   if (!cmd) return; if (!key) { msg('Add your Gemini key first (Key button).', true); return; }
   if (!world) { msg('Map is still loading.', true); return; }
-  $('wm-run').disabled = true; steps = []; step('Classifying the request');
+  $('wm-run').disabled = true; steps = []; cur = { id: 'l' + Date.now().toString(36), cmd, time: new Date().toISOString(), steps }; step('Classifying the request');
   try {
     const h = (view.w * ch) / cw, b = [x2lon(view.cx - view.w / 2), y2lat(view.cy + h / 2), x2lon(view.cx + view.w / 2), y2lat(view.cy - h / 2)].map((v) => +v.toFixed(1));
     const c = (await gem([{ text: `${cmd}\nCurrent view (west, south, east, north): ${b.join(', ')}` }], { system: CLS })).data;
     if (!c) throw new Error('Could not understand the request');
+    if (c.tier === 'exists') {
+      const q = norm(c.subject || cmd), qc = norm(cmd), hit = (n) => { n = norm(n); return n && (q === n || qc === n || qc.includes(n)); };
+      const real = world.countries.some((k) => hit(k.n) || hit(k.f)) || world.india.some((k) => hit(k.n)) || (loaded.d?.districts || []).some((k) => hit(k.n)) || (loaded.f ? Object.values(loaded.f.byCountry).some((a) => a.some((k) => hit(k.n))) : false) || (loaded.r?.rivers || []).some((k) => hit(k.n));
+      if (!real) { c.tier = 'medium'; c.natural = c.natural ?? true; }
+    }
     if (c.tier === 'exists') { $('wm-info').innerHTML = '<div class="wm-muted">' + esc(c.reason || 'Already on the map') + '</div>'; msg(c.reason || 'Already on the map: hover it, or click it and press Use as chapter shape', true); }
     else { step(`Tier: ${c.tier}${c.year != null ? ' · ' + yl(c.year) : ''}`); await (c.tier === 'simple' ? simple(cmd, c) : composed(c, cmd)); }
-  } catch (err) { msg('Error: ' + err.message, true); }
-  $('wm-run').disabled = false;
+  } catch (err) { if (cur) cur.error = String(err.message); msg('Error: ' + err.message, true); }
+  saveLog(); $('wm-run').disabled = false;
 }
 $('wm-run').onclick = run; $('wm-cmd').addEventListener('keydown', (e) => { if (e.key === 'Enter') run(); });
 window.vnMap = { addFeature, fit, get features() { return feats; } };
