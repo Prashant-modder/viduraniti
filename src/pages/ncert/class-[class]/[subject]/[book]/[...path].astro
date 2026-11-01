@@ -11,7 +11,7 @@ import BigQuestionsPage from '@/components/BigQuestionsPage.astro';
 import VisualPage from '@/components/VisualPage.astro';
 import AnimationPage from '@/components/AnimationPage.astro';
 import {
-  loadBook, loadChapter, loadUnit, allRoutes, solutionKeys, prettify, RESERVED, COLLECTIONS,
+  loadBook, loadChapter, loadUnit, allRoutes, solutionKeys, prettify, RESERVED, COLLECTIONS, resolveContent,
 } from '@/data/loader';
 import { BOOKS, SUBJECT_LABELS } from '@/data/books';
 
@@ -36,8 +36,8 @@ const noChapter = kind === 'unit' || kind === 'book';
 const chapterPath = unitSlug ? `${unitSlug}/${chapterSlug}` : chapterSlug;
 const currentUnit = units.find((u) => u.slug === unitSlug);
 const unitData = kind === 'unit' ? loadUnit(classNum, subKey, bookSlug, unitSlug) : null;
-const empty = { chapter: null as any, pages: {} as Record<string, any>, collections: {} as Record<string, Record<string, any>> };
-const { chapter, pages, collections } = noChapter ? empty : loadChapter(classNum, subKey, bookSlug, chapterPath);
+const empty = { chapter: null as any, pages: {} as Record<string, any>, collections: {} as Record<string, Record<string, any>>, images: {} as Record<string, string> };
+const { chapter, pages, collections, images } = noChapter ? empty : loadChapter(classNum, subKey, bookSlug, chapterPath);
 
 const bookBase = `/ncert/class-${classNum}/${subject}/${bookSlug}`;
 const chapterBase = `${bookBase}/${chapterPath}`;
@@ -151,7 +151,7 @@ else {
           meta={metaLine}
           subjectTag={subLabel}
           tags={pageMod?.meta?.tags ?? ['Solutions']}
-          sections={pageMod?.sections ?? []}
+          sections={resolveContent(pageMod?.sections ?? [], images)}
           prev={prev}
           next={next}
         />
@@ -189,7 +189,7 @@ else {
             ) : <p class="vn-muted">Chapter content coming soon.</p>
           )}
 
-          {pt === 'textbook' && <TextbookPage data={pageMod} />}
+          {pt === 'textbook' && <TextbookPage data={resolveContent(pageMod, images)} />}
           {pt === 'exam-notes' && <ExamNotesPage data={pageMod} />}
           {pt === 'summary' && <SummaryPage data={pageMod} base={chapterBase} />}
           {pt === 'glossary' && (

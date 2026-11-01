@@ -3,10 +3,11 @@ export const meta = { title: "Let Us Speak", order: 6, tags: ["Solutions", "Spea
 export const sections = [
   {
     roman: "I",
-    instruction: "The River spoke to Jahnavi in a 'sleepy' voice: 'Dear, dear! What's the matter? ... You shouldn't cry, you know. And you really shouldn't be scared, when you have been coming here to see me every day, well, almost every day.' Work in pairs and take turns to speak the same sentence in 'other' voices: happy, surprised, angry, scared, sad, worried.",
+    instruction: "Read the sentence: 'Dear, dear! What's the matter? ... You shouldn't cry, you know. And you really shouldn't be scared, when you have been coming here to see me every day, well, almost every day.' The River spoke to Jahnavi in a 'sleepy' voice. Work in pairs and take turns to speak the same sentence in 'other' voices.",
     items: [
       {
         n: 1, type: "activity",
+        wordBox: ["happy", "surprised", "angry", "scared", "sad", "worried"],
         question: "Speak the River's sentence in six different voices.",
         answer: [
           "*(Pair activity - delivery tips.)*",
@@ -22,31 +23,13 @@ export const sections = [
   },
   {
     roman: "II",
-    instruction: "Jahnavi asks the River for advice and the River gives advice. Work in pairs to ask for and give advice in the situations below. Take turns to change roles and use the phrases in the boxes.",
-    boxes: [
-      {
-        type: "box", kind: "advice", title: "Asking for advice",
-        items: [
-          "I have a problem with ... What do you think I should do?",
-          "I have a problem with ... Do you think I should ...?",
-          "I have a problem with ... What would you do in my position?",
-          "I have a problem with ... I'd appreciate your advice on this issue."
-        ]
-      },
-      {
-        type: "box", kind: "advice", title: "Giving advice",
-        items: [
-          "I think you should ...",
-          "Why don't you ...?",
-          "The best thing to do is ...",
-          "If I were you, I would / wouldn't ..."
-        ]
-      }
-    ],
+    instruction: "Jahnavi asks the River for advice and the River gives advice. Read the situations and work in pairs to ask for and give advice. Take turns to change your roles. Use the prompts: Asking for advice - '___ problem ___. What do you think I should do?', 'Do you think I should...?', 'What would you do in my position?', 'I'd appreciate your advice on this issue.'",
     items: [
       {
         n: 1, type: "activity",
-        question: "Situation (i): You wish to play football at school, but it has an all-boys' team only.",
+        wordBox: ["I think you should...", "Why don't you...?", "The best thing to do is...", "If I were you, I would / wouldn't..."],
+        figure: { src: "images/football-girl.png", alt: "A girl kicking a football" },
+        question: "Situation (i): You wish to play football at school but it has an all-boys' team only.",
         answer: [
           "*(Sample role-play.)*",
           "**A:** I have a problem. I wish to play football at school, but the team is only for boys. What do you think I should do?",

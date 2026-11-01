@@ -3,21 +3,16 @@ export const meta = { title: "Let Us Write", order: 7, tags: ["Solutions", "Writ
 export const sections = [
   {
     roman: "I",
-    instruction: "Observing Nature. Over the next few days, pay attention to the colours, shapes, patterns and textures in nature - plants, trees, flowers, birds and even the sky. Make detailed notes on textures, movements and how light plays with these things, including the features that draw your attention most (the ripple of water, the flutter of a butterfly, the colour of a bird). Then write a descriptive paragraph and give it a title.",
-    boxes: [
-      {
-        type: "box", kind: "panel", title: "Ideas and prompts",
-        columns: ["Ideas", "Prompts"],
-        rows: [
-          ["What do you observe?", "Every day, I see... / I find it very interesting that..."],
-          ["How do you feel? Why?", "I like... because... / I feel... as..."],
-          ["What is your message to everyone around you?", "I want to tell you that... / My advice to all is..."]
-        ]
-      }
-    ],
+    instruction: "Observing Nature. Over the next few days, pay attention to the colours, shapes, patterns and textures found in nature - plants, trees, flowers, birds and even the sky. Make detailed notes on textures, movements and how light plays with these elements, including the features that draw your attention most (the soft ripple of water, the flutter of a butterfly, the colour of a bird or flower). Then write a descriptive paragraph highlighting colours, shapes, textures and unique details. Give your paragraph a title.",
     items: [
       {
         n: 1, type: "activity",
+        figure: { src: "images/observing-nature.png", alt: "A meadow of colourful flowers with birds and trees" },
+        wordBox: [
+          "What do you observe? Every day, I see... / I find it very interesting that...",
+          "How do you feel? Why? I like... because... / I feel... as...",
+          "What is your message to everyone around you? I want to tell you that... / My advice to all is..."
+        ],
         question: "Write a descriptive paragraph on what you have observed in nature. Give it a title.",
         answer: [
           "**A Morning by the Pond**",

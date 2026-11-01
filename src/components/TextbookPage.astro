@@ -3,9 +3,15 @@
 import Prose from './Prose.astro';
 import { renderInline } from '@/lib/md';
 
+/*
+  textbook.js exports: originalUrl?, intro?, cover?, parts[], characters[], themes[]
+    cover  { image, alt?, caption? }        shown under the original-chapter link
+    part   { heading, explain, glossary?, image?, imageAlt?, caption? }
+  Image names ("image.png", "images/river.png") are resolved by resolveContent() in the route.
+*/
 interface Props { data: any }
 const { data } = Astro.props;
-const { originalUrl, intro, parts = [], characters = [], themes = [] } = data ?? {};
+const { originalUrl, intro, cover, parts = [], characters = [], themes = [] } = data ?? {};
 ---
 
 {originalUrl && (
@@ -14,11 +20,24 @@ const { originalUrl, intro, parts = [], characters = [], themes = [] } = data ??
   </a>
 )}
 
+{cover?.image && (
+  <figure class="tb-fig tb-cover">
+    <img src={cover.image} alt={cover.alt ?? ''} loading="lazy" onerror="this.parentElement.style.display='none'" />
+    {cover.caption && <figcaption>{cover.caption}</figcaption>}
+  </figure>
+)}
+
 {intro && <Prose md={intro} />}
 
 {parts.map((p: any) => (
   <section class="tb-part">
     <h2 class="tb-heading">{p.heading}</h2>
+    {p.image && (
+      <figure class="tb-fig">
+        <img src={p.image} alt={p.imageAlt ?? ''} loading="lazy" onerror="this.parentElement.style.display='none'" />
+        {p.caption && <figcaption>{p.caption}</figcaption>}
+      </figure>
+    )}
     {p.explain && <Prose md={p.explain} />}
     {p.glossary?.length > 0 && (
       <dl class="tb-gloss">
@@ -54,6 +73,10 @@ const { originalUrl, intro, parts = [], characters = [], themes = [] } = data ??
 <style>
   .tb-original { display: inline-block; margin-bottom: 24px; font-family: var(--font-ui); font-size: 13px; font-weight: 500; color: var(--ink); text-decoration: none; padding: 7px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); transition: border-color .15s; }
   .tb-original:hover { border-color: var(--saffron); }
+  .tb-fig { max-width: 68ch; margin: 0 0 16px; }
+  .tb-fig img { display: block; max-width: min(100%, 460px); height: auto; border-radius: 10px; }
+  .tb-fig figcaption { margin-top: 6px; font-family: var(--font-ui); font-size: 12px; color: var(--ink-muted); }
+  .tb-cover { display: block; margin-bottom: 24px; }
   .tb-part { margin-top: 36px; max-width: 68ch; }
   .tb-heading { font-family: var(--font-ui); font-size: 20px; font-weight: 600; color: var(--ink); margin-bottom: 10px; }
   .tb-gloss { margin-top: 14px; border-left: 3px solid var(--saffron); background: var(--saffron-light); border-radius: 0 8px 8px 0; padding: 10px 16px; font-family: var(--font-ui); font-size: 14px; line-height: 1.6; }

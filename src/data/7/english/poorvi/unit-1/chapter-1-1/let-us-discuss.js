@@ -19,28 +19,23 @@ export const sections = [
   },
   {
     roman: "II",
-    instruction: "Complete the table with Jahnavi's questions (Column 1) and the River's answers (Column 2). Check your answers with the teacher.",
+    instruction: "Complete the table with Jahnavi's questions in Column 1 and the River's answers in Column 2. Check your answers with the teacher.",
     items: [
       {
-        n: 1, type: "match",
+        n: 1, type: "table",
         question: "Fill in the missing cells of the table.",
-        left: [
-          "1. ...why the moon always comes from behind the hills...?",
-          "2. ______",
-          "3. ______",
-          "4. Will they come here?"
-        ],
-        right: [
-          "(i) ______",
-          "(ii) ...little girls can do as much as little boys.",
-          "(iii) Big boats, so big that they can take hundreds of people...",
-          "(iv) ______"
+        columns: ["Column 1 (Jahnavi)", "Column 2 (the River)"],
+        rows: [
+          ["...why the moon always comes from behind the hills...?", "______"],
+          ["______", "... little girls can do as much as little boys."],
+          ["______", "Big boats, so big that they can take hundreds of people, and they sail along the sea with lights that shine all night."],
+          ["Will they come here?", "______"]
         ],
         answer: [
-          "1. **Jahnavi:** ...why the moon always comes from behind the hills...? -> **River:** It goes down towards the sea; it always takes the same way, over the mountains and down to the sea.",
-          "2. **Jahnavi:** Can I do something? -> **River:** ...little girls can do as much as little boys.",
-          "3. **Jahnavi:** What are ships? -> **River:** Big boats, so big that they can take hundreds of people...",
-          "4. **Jahnavi:** Will they come here? -> **River:** I'm afraid not. Too large, you know."
+          ["...why the moon always comes from behind the hills...?", "It goes down towards the sea. It always takes the same way - over the mountains and down to the sea, like me!"],
+          ["Can I do something? (to go to school)", "... little girls can do as much as little boys."],
+          ["What are ships?", "Big boats, so big that they can take hundreds of people, and they sail along the sea with lights that shine all night."],
+          ["Will they come here?", "I'm afraid not. Too large, you know."]
         ]
       }
     ]

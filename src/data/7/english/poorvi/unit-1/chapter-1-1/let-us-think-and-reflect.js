@@ -7,7 +7,7 @@ export const sections = [
     items: [
       {
         n: 1,
-        passage: `"You shouldn't cry, you know," the voice went on. "And you really shouldn't be scared, when you have been coming here to see me every day, well, almost every day." She was puzzled. It was such a voice, like the river. It couldn't be the river! "Well, tell me all about it," said the River... "I've got to hurry to reach the sea, you know."`,
+        passage: `"You shouldn't cry, you know," the voice went on. "And you really shouldn't be scared, when you have been coming here to see me every day, well, almost every day." She was puzzled. It was such a voice, like the river. It couldn't be the river! "Well, tell me all about it," said the River, for it was the River. "I've got to hurry to reach the sea, you know."`,
         parts: [
           {
             label: "i", type: "fill",

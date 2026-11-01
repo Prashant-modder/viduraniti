@@ -39,39 +39,39 @@ export const blocks = [
     ]
   },
   {
+    type: "grammar",
+    title: "Prepositions and adverbs",
+    rule: "A **preposition** shows the relation between a noun/pronoun and the rest of the sentence (towards, over, down, at, inside, between, about) and is always followed by an object. Words like **on, off, up, down** can be prepositions (She ran *up* the stairs) or adverbs (She rang me *up*). An adverb tells more about the verb and has no object after it.",
+    examples: ["She ran up the stairs. (preposition)", "She rang me up. (adverb)"]
+  },
+  {
     type: "keypoints",
-    title: "Grammar revision",
+    title: "Capital letter for 'River'",
     items: [
-      "A common noun begins with a capital letter only when it is personified, as with the River.",
-      "A preposition shows the relation between a noun/pronoun and the rest of the sentence (towards, over, down, at, inside, between, about) and is always followed by an object.",
-      "Words like on, off, up and down can be prepositions (She ran up the stairs) or adverbs (She rang me up). An adverb tells more about the verb and has no object after it."
+      "A common noun begins with a capital letter only when it is personified, as with the River."
     ]
   },
   {
     type: "vocab",
     items: [
-      { word: "splashed", meaning: "fell in drops, making a sound" },
-      { word: "slithered", meaning: "moved by sliding from side to side" },
-      { word: "murmuring", meaning: "speaking in a low voice" },
-      { word: "startled", meaning: "surprised" },
-      { word: "thicket", meaning: "a dense group of bushes and trees" },
-      { word: "shrieked", meaning: "made a high-pitched sound" },
-      { word: "rustle", meaning: "light sound made by leaves rubbing against each other" },
-      { word: "conspiratorially", meaning: "secretly" },
-      { word: "clump", meaning: "a small group of trees growing together" },
-      { word: "rattling", meaning: "noise made by shaking things" },
-      { word: "catamaran", meaning: "a kind of boat" },
-      { word: "wailed", meaning: "(here) complained in a loud voice" }
+      { word: "splashed", meaning: "fell in drops, making a sound", use: "A big bright tear splashed down her nose." },
+      { word: "slithered", meaning: "moved by sliding from side to side", use: "A green lizard slithered down to the river's edge." },
+      { word: "murmuring", meaning: "speaking in a low voice", use: "a sleepy, murmuring voice" },
+      { word: "startled", meaning: "surprised", use: "Jahnavi was startled." },
+      { word: "thicket", meaning: "a dense group of bushes and trees", use: "a thicket of bamboo" },
+      { word: "shrieked", meaning: "made a high-pitched sound", use: "Parrots shrieked." },
+      { word: "rustle", meaning: "light sound made by leaves rubbing against each other", use: "Why do bamboo trees rustle?" },
+      { word: "conspiratorially", meaning: "secretly", use: "the River said conspiratorially" },
+      { word: "clump", meaning: "a small group of trees growing together", use: "the snake in the bamboo clump" },
+      { word: "rattling", meaning: "noise made by shaking things", use: "trains rattling past the bridge" },
+      { word: "catamaran", meaning: "a kind of boat", use: "Chandu's catamaran" },
+      { word: "wailed", meaning: "(here) complained in a loud voice", use: "'They'd never let me!' wailed Jahnavi." }
     ]
   },
   {
     type: "likely",
     items: [
-      {
-        marks: 1,
-        q: "Who owns the catamaran that the River likes?",
-        a: "Chandu, the fisherman."
-      },
+      { marks: 1, q: "Who owns the catamaran that the River likes?", a: "Chandu, the fisherman." },
       {
         marks: 2,
         q: "Why was Jahnavi crying at the beginning of the story?",
@@ -101,11 +101,6 @@ export const blocks = [
         marks: 5,
         q: "How does the story show that girls deserve equal opportunities?",
         a: "The River states that little girls can do as much as little boys, and Jahnavi proves it by taking the first step. The teacher visits her father to find a way for her to study, and her mother says girls should learn as much as they want, regretting that she herself was refused. Jahnavi then decides to bring all the village girls to school. Together these events show that education is a right of every child and that the support of family, teachers and society helps girls to realise their dreams."
-      },
-      {
-        marks: 5,
-        q: "What roles do the teacher and Jahnavi's mother play in making her dream come true?",
-        a: "The teacher notices Jahnavi in class, welcomes her instead of chasing her out, and visits her father to find a way for her to study. Jahnavi's mother, who once wanted to go to school herself, supports her daughter and says she is glad that the teacher came. Their kindness and understanding turn Jahnavi's courage into real opportunity."
       }
     ]
   }

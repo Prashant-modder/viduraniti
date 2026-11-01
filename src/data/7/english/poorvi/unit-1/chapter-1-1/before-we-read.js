@@ -3,11 +3,11 @@ export const meta = { title: "Before We Read", order: 1, tags: ["Warm-up", "Disc
 export const sections = [
   {
     roman: "I",
-    instruction: "Close your eyes and quietly listen to the sounds around you for a minute. Then share your answers with your classmates and the teacher.",
+    instruction: "Close your eyes and quietly listen to the sounds around you for a minute. Share your answers with your classmates and the teacher.",
     items: [
       {
         n: 1, type: "activity",
-        question: "Are the sounds around you trying to tell you something?",
+        question: "Are they trying to tell you something?",
         answer: [
           "*(Class discussion - sample answer.)*",
           "Yes. Birdsong tells us that the day has begun, rustling leaves tell us the wind is blowing, and a distant rumble warns us that rain may be on its way. When we stay quiet and listen, the world around us seems to be speaking."
@@ -25,11 +25,11 @@ export const sections = [
   },
   {
     roman: "II",
-    instruction: "Jahnavi is a bright young girl from a coastal village in India. She lives with her parents and three brothers, and her parents work on the farm. She has a dream. Share your answers with your classmates and the teacher.",
+    instruction: "Jahnavi was a bright young girl who lived with her parents and three brothers in a coastal village in India. Her parents worked on the farm. She had a dream. Share your answers with your classmates and the teacher.",
     items: [
       {
         n: 1, type: "activity",
-        question: "What could Jahnavi's dream be?",
+        question: "What could that dream be?",
         answer: "Her dream could be to go to school, learn to read and write, and find out the reasons behind the things she wonders about - perhaps even to become a teacher one day."
       },
       {

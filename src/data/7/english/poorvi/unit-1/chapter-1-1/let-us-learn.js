@@ -3,7 +3,7 @@ export const meta = { title: "Let Us Learn", order: 4, tags: ["Solutions", "Voca
 export const sections = [
   {
     roman: "I",
-    instruction: "You have learnt that naming words are called nouns and only proper nouns begin with a capital letter. (Clue: has the River been given the qualities of a human being?)",
+    instruction: "You have learnt that naming words are called nouns and only proper nouns begin with a capital letter. (Clue: Has the River been given the qualities of a human being?)",
     items: [
       {
         n: 1, type: "long",
@@ -14,39 +14,40 @@ export const sections = [
   },
   {
     roman: "II",
-    instruction: "There are a few words related to sound in the text. Pick the words from the text and write them next to the correct definition. Then fill in the blanks with suitable sound words.",
+    instruction: "There are a few words related to sound in the text. Pick the words from the text and write them next to the correct definition. Then fill in the blanks with suitable sound words from this exercise.",
     items: [
       {
-        n: 1, type: "match",
+        n: 1, type: "table",
         question: "Write the sound word next to each definition.",
-        left: [
-          "1. made a high-pitched piercing sound",
-          "2. to cause liquid to strike or fall on something",
-          "3. a low continuous background noise",
-          "4. to cry with loud uncontrollable gasps",
-          "5. to make a soft dry sound, like paper or leaves moving",
-          "6. took a short quick breath through the mouth due to surprise, pain or shock",
-          "7. shaking rapidly to make continuous short, sharp sounds",
-          "8. making a lot of noise",
-          "9. made a long, high cry, usually because of pain or sadness"
+        columns: ["Definition", "Sound word"],
+        rows: [
+          ["1. made a high-pitched piercing sound", "______"],
+          ["2. to cause liquid to strike or fall on something", "______"],
+          ["3. a low continuous background noise", "______"],
+          ["4. cry with loud uncontrollable gasps", "______"],
+          ["5. to make a soft dry sound, like paper or leaves moving", "______"],
+          ["6. took a short quick breath through the mouth due to surprise, pain or shock", "______"],
+          ["7. shaking rapidly to make continuous short, sharp sounds", "______"],
+          ["8. making a lot of noise", "______"],
+          ["9. made a long, high cry, usually because of pain or sadness", "______"]
         ],
-        right: ["noisy", "splashed", "gasped", "shrieked", "murmuring", "sob", "rustle", "rattling", "wailed"],
         answer: [
-          "1. **shrieked**",
-          "2. **splashed**",
-          "3. **murmuring**",
-          "4. **sob**",
-          "5. **rustle**",
-          "6. **gasped**",
-          "7. **rattling**",
-          "8. **noisy**",
-          "9. **wailed**"
+          ["1. made a high-pitched piercing sound", "shrieked"],
+          ["2. to cause liquid to strike or fall on something", "splashed"],
+          ["3. a low continuous background noise", "murmuring"],
+          ["4. cry with loud uncontrollable gasps", "sob"],
+          ["5. to make a soft dry sound, like paper or leaves moving", "rustle"],
+          ["6. took a short quick breath through the mouth due to surprise, pain or shock", "gasped"],
+          ["7. shaking rapidly to make continuous short, sharp sounds", "rattling"],
+          ["8. making a lot of noise", "noisy"],
+          ["9. made a long, high cry, usually because of pain or sadness", "wailed"]
         ]
       },
       {
         n: 2, type: "blanks",
-        question: "Fill in the blanks with suitable sound words from the list above.",
-        passage: "The classroom turned (i) ______ when the students saw the teacher carrying the answer papers. The teacher flipped the pages with a (ii) ______ while the children (iii) ______, wondering about their marks. One student (iv) ______ in frustration, and the (v) ______ in the room kept growing. At last the teacher praised everyone's performance, and the students (vi) ______ with excitement.",
+        question: "Fill in the blanks with suitable sound words from the exercise above.",
+        wordBox: ["noisy", "splashed", "gasped", "shrieked", "murmuring", "sob", "rustle", "rattling", "wailed"],
+        passage: "The classroom grew (i) ______ as the students noticed the teacher carrying the answer papers. As the teacher turned the pages with a (ii) ______, the children (iii) ______, wondering what comments awaited. Someone (iv) ______ in frustration, and the (v) ______ of the students steadily increased. Finally, when the teacher praised the students for their excellent performance, the students (vi) ______ with excitement.",
         answer: [
           "(i) **noisy**",
           "(ii) **rustle**",
@@ -60,7 +61,7 @@ export const sections = [
   },
   {
     roman: "III",
-    instruction: "The word 'catamaran' is used in the text. It comes from the Tamil kattu maram, meaning 'tied wood'. Find out the meanings of these words and the Indian language each was borrowed from. An example has been given.",
+    instruction: "The word 'catamaran' is used in the text. The word originates from the Tamil language 'kattu maram' meaning 'tied wood'. Find out the meanings of these words and the Indian language each was borrowed from. An example has been given.",
     items: [
       {
         n: 1,
@@ -79,7 +80,7 @@ export const sections = [
   },
   {
     roman: "IV",
-    instruction: "Chandu, the fisherman, has a catamaran that the River preferred to a ship. Some boats used in different parts of our country are: canoe, catamaran, coracle and shikara.",
+    instruction: "Chandu, the fisherman, has a catamaran that the River preferred to a ship. Given below are some boats that are used in different parts of our country.",
     items: [
       {
         n: 1,
@@ -87,6 +88,7 @@ export const sections = [
           {
             label: "i", type: "activity",
             question: "Which one would you like to travel in?",
+            figure: { src: "images/boats.png", alt: "Four boats: 1 canoe, 2 catamaran, 3 coracle, 4 shikara" },
             answer: "*(Personal choice - sample.)* I would choose a **shikara**, because it has a roof and cushioned seats, and gliding slowly over a calm lake lets me enjoy the view."
           },
           {
@@ -103,19 +105,8 @@ export const sections = [
     instruction: "Solve the crossword puzzle based on words related to water transport.",
     items: [
       {
-        n: 1, type: "crossword",
-        question: "Complete the crossword using the clues.",
-        grid: { rows: 8, cols: 11 },
-        given: [[1,7],[1,11],[2,1],[2,11],[3,11],[4,2],[4,7],[4,9],[4,11],[5,1],[7,2],[7,11],[8,2],[8,8],[8,9],[8,10]],
-        entries: [
-          { n: 1, dir: "across", row: 2, col: 1, answer: "SHIP", clue: "a large vessel used for transporting goods or passengers by sea" },
-          { n: 2, dir: "across", row: 4, col: 6, answer: "BOAT", clue: "a small vessel for travelling on water, moved by oars, sails or an engine" },
-          { n: 3, dir: "across", row: 5, col: 1, answer: "RAFT", clue: "a flat floating structure for travelling across water" },
-          { n: 4, dir: "across", row: 8, col: 4, answer: "STEAMER", clue: "a boat or ship driven by steam" },
-          { n: 5, dir: "down", row: 1, col: 7, answer: "CANOE", clue: "a small, light, narrow boat, pointed at both ends and moved with a paddle" },
-          { n: 6, dir: "down", row: 1, col: 11, answer: "TUGBOAT", clue: "a boat with a powerful engine that pulls large ships into and out of port" },
-          { n: 7, dir: "down", row: 4, col: 2, answer: "YACHT", clue: "a boat with sails, sometimes an engine, used for racing or pleasure; rhymes with 'cot'" }
-        ],
+        n: 1, type: "activity",
+        question: "Complete the crossword using the clues. Across: 1 a large vessel used for transporting goods or passengers by sea; 2 a small vessel for travelling on water, typically propelled by oars, sails or an engine; 3 a flat floating structure for travelling across water; 4 a boat or ship driven by steam. Down: 5 a small, light, narrow boat, pointed at both ends and moved using a paddle; 6 a boat with a powerful engine which pulls large ships into and out of port; 7 a boat with sails and sometimes an engine, used for racing or pleasure, rhymes with 'cot'.",
         answer: [
           "**Across:** 1. SHIP   2. BOAT   3. RAFT   4. STEAMER",
           "**Down:** 5. CANOE   6. TUGBOAT   7. YACHT"
@@ -125,7 +116,7 @@ export const sections = [
   },
   {
     roman: "VI",
-    instruction: "'She goes down towards the sea ... over the mountains and down to the sea.' The words towards, over and down are prepositions. Prepositions are words that show the relationship between nouns or pronouns and other parts of a sentence - direction, location, time or logical links between ideas. Fill in the blanks with the suitable prepositions given in the brackets.",
+    instruction: "Read the highlighted words in these lines from the text: 'She goes down towards the sea ... over the mountains and down to the sea, like me!' The words towards, over and down are prepositions. Prepositions are words that indicate the relationship between nouns or pronouns and other elements in a sentence - direction, location, time or logical relationships between ideas. Fill in the blanks with the suitable prepositions given within the brackets.",
     items: [
       {
         n: 1, type: "blanks",
@@ -144,16 +135,11 @@ export const sections = [
   },
   {
     roman: "VII",
-    instruction: "In 'A kingfisher swept down', the word 'down' is an adverb. Words like on, off, up and down can be both prepositions and adverbs. Example: 'She ran up the stairs' (preposition) and 'She rang me up' (adverb). Fill in the blanks with prepositions or adverbs as shown in the brackets.",
-    boxes: [
-      {
-        type: "box", kind: "remember",
-        body: "A preposition is always followed by an object (a noun), whereas an adverb tells you more about the action (the verb)."
-      }
-    ],
+    instruction: "In 'A kingfisher swept down, its wings an arrow of blue in the sunlight', the word 'down' is an adverb. Words like on, off, up and down can function both as prepositions and as adverbs. For example: 'She ran up the stairs' (preposition) and 'She rang me up' (adverb). Remember: a preposition will always be followed by an object (noun), whereas an adverb will tell you more about the action (verb). Fill in the blanks with prepositions or adverbs as shown in the brackets.",
     items: [
       {
         n: 1,
+        figure: { src: "images/kingfisher.png", alt: "A kingfisher diving into the water" },
         parts: [
           { label: "1", type: "short", question: "The cat jumped ______ the table. (preposition)", answer: "**on** (also: off, onto)" },
           { label: "2", type: "short", question: "The children played ______ until dark. (adverb)", answer: "**outside** (also: on)" },

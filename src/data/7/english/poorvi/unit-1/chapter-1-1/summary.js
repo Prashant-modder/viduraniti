@@ -9,10 +9,10 @@ The next day Jahnavi gathers her courage and, with little Appu asleep on her sho
 export const moral = `Education is a right for every child, girls and boys alike. With courage and self-belief, and with the support of kind people, we can overcome fear and the barriers in our way and make our dreams come true.`;
 
 export const quotes = [
-  { text: "\"Remember - it's up to you!\"", speaker: "The River" },
-  { text: "\"Little girls can do as much as little boys.\"", speaker: "The River" },
-  { text: "\"I want to learn to read like Ettan and Meena.\"", speaker: "Jahnavi" },
-  { text: "\"I was scared, but I did it!\"", speaker: "Jahnavi" }
+  { text: "\"Remember - it's up to you!\"", by: "The River" },
+  { text: "\"Little girls can do as much as little boys.\"", by: "The River" },
+  { text: "\"I want to learn to read like Ettan and Meena.\"", by: "Jahnavi" },
+  { text: "\"I was scared, but I did it!\"", by: "Jahnavi" }
 ];
 
 export const mascot = { pose: "smiling" };

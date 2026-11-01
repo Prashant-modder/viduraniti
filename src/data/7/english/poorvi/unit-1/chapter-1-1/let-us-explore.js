@@ -35,10 +35,11 @@ export const sections = [
   },
   {
     roman: "III",
-    instruction: "Read the poster 'The Happiness of a Nation lies in the Dignity of its Daughters' and answer the questions that follow. (Dignity means 'self-respect'.)",
+    instruction: "Read the poster given below and answer the questions that follow. (Dignity means 'self-respect'.)",
     items: [
       {
         n: 1, type: "short",
+        figure: { src: "images/poster.png", alt: "Poster: The Happiness of a Nation lies in the Dignity of its Daughters, showing smiling girls in a classroom" },
         question: "What are the things you can observe in the poster?",
         answer: "A group of smiling girls sitting together in a classroom, one of them writing in a notebook, and a bold slogan on a green panel with the words 'its Daughters' highlighted in yellow. The bright colours and cheerful faces give a feeling of joy."
       },
@@ -65,6 +66,7 @@ export const sections = [
     items: [
       {
         n: 1, type: "activity",
+        figure: { src: "images/girls-walking.png", alt: "Schoolgirls and a boy walking to school together" },
         question: "Find out more such schemes from the internet or from your teacher and spread awareness in your neighbourhood.",
         answer: [
           "*(Research and awareness activity - starting points.)*",
