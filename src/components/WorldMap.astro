@@ -76,6 +76,9 @@
       <button id="wm-clear" type="button">Clear all</button>
       <input id="wm-file" type="file" accept=".json,.geojson" hidden />
     </div>
+
+    <div class="wm-ptitle">Run log <button id="wm-logclear" type="button" class="wm-mini">Clear</button></div>
+    <div id="wm-logview" class="wm-logview"></div>
   </aside>
 </div>
 
@@ -292,17 +295,27 @@ async function regionize(f, level) {
   f.method = (f.method ? f.method + ' · ' : '') + `snapped to ${n} ${level}${n > 1 ? 's' : ''}`;
   save(); renderUser(); select(f.id); fit(bboxOf(f)); msg(`Snapped to ${n} ${level}${n > 1 ? 's' : ''}. Parts outside the official data were dropped.`);
 }
+function logBody(g) {
+  const li = (a) => a.map((x) => `<li>${esc(x)}</li>`).join(''), lk = (a) => (a || []).filter((x) => /^https?:/.test(x.uri)).map((x) => `<a href="${esc(x.uri)}" target="_blank" rel="noopener noreferrer">${esc(x.title)}</a>`).join(' · ');
+  return `<ol class="wm-steps">${li(g.steps || [])}</ol>`
+    + (g.error ? `<div class="wm-flags">${esc(g.error)}</div>` : '')
+    + (g.classify ? `<div class="wm-ptitle" style="margin-top:8px">Research</div><div class="wm-muted">Tier ${esc(g.classify.tier)} · ${esc(g.classify.subject || '')}</div>` : '')
+    + (g.passes || []).map((p, i) => `<div class="wm-muted"><b>${p.wikipedia ? 'Wikipedia map' : 'Pass ' + (i + 1)}:</b> ${p.error ? esc(p.error) : esc((p.regions || []).map((r) => r.name + (r.part === 'part' ? ' (part)' : '')).join(', ')) + (p.sources?.length ? '<br>' + lk(p.sources) : '')}</div>`).join('')
+    + (g.votes ? `<div class="wm-muted"><b>Kept</b> (needed ${g.need} vote${g.need > 1 ? 's' : ''}): ${esc(g.votes.filter((v) => v.votes >= g.need).map((v) => v.name + ' x' + v.votes).join(', '))}</div>` : '')
+    + (g.missing?.length ? `<div class="wm-muted"><b>Not matched:</b> ${esc(g.missing.join(', '))}</div>` : '')
+    + (g.rounds?.length ? `<div class="wm-muted"><b>Visual checks:</b></div><ul class="wm-steps">${li(g.rounds.map((r) => r.error || ((r.ok ? 'OK' : '') + (r.remove?.length ? ' remove: ' + r.remove.join(', ') : '') + (r.add?.length ? ' add: ' + r.add.map((a) => a.name || a).join(', ') : '') + (r.note ? ' · ' + r.note : ''))))}</ul>` : '');
+}
+function renderLogs() {
+  const box = $('wm-logview'); if (!box) return;
+  let l = []; try { l = JSON.parse(localStorage.getItem('vn-map-logs') || '[]'); } catch {}
+  const open = new Set([...box.querySelectorAll('details[open]')].map((d) => d.dataset.id));
+  const all = cur && !l.some((x) => x.id === cur.id) ? [cur, ...l] : l;
+  box.innerHTML = all.length ? all.map((g, i) => `<details class="wm-run" data-id="${esc(g.id)}"${open.has(g.id) || (i === 0 && !open.size) ? ' open' : ''}><summary>${esc(String(g.cmd).slice(0, 55))}<small>${esc(String(g.time).slice(11, 16))}${g.error ? ' · error' : ''}</small></summary>${logBody(g)}</details>`).join('') : '<div class="wm-muted">Runs will appear here.</div>';
+}
 function showLog(id) {
   let l = []; try { l = JSON.parse(localStorage.getItem('vn-map-logs') || '[]'); } catch {}
-  const g = l.find((x) => x.id === id); if (!g) { msg('That log was cleared.', true); return; }
-  const li = (a) => a.map((x) => `<li>${esc(x)}</li>`).join(''), lk = (a) => (a || []).filter((x) => /^https?:/.test(x.uri)).map((x) => `<a href="${esc(x.uri)}" target="_blank" rel="noopener noreferrer">${esc(x.title)}</a>`).join(' · ');
-  $('wm-info').innerHTML = `<div class="wm-it">Research log</div><div class="wm-is">${esc(g.cmd)} · ${esc(g.time)}</div>`
-    + (g.classify ? `<div class="wm-muted">Tier ${esc(g.classify.tier)} · ${esc(g.classify.subject || '')}</div>` : '')
-    + (g.passes || []).map((p, i) => `<div class="wm-ptitle" style="margin-top:8px">Pass ${i + 1}</div>` + (p.error ? `<div class="wm-flags">${esc(p.error)}</div>` : `<div class="wm-muted">${esc((p.regions || []).map((r) => r.name + (r.part === 'part' ? ' (part)' : '')).join(', '))}</div><div class="wm-muted">${lk(p.sources)}</div>`)).join('')
-    + (g.votes ? `<div class="wm-ptitle" style="margin-top:8px">Kept (needed ${g.need} vote${g.need > 1 ? 's' : ''})</div><div class="wm-muted">${esc(g.votes.filter((v) => v.votes >= g.need).map((v) => v.name + ' x' + v.votes).join(', '))}</div>` : '')
-    + (g.missing?.length ? `<div class="wm-ptitle" style="margin-top:8px">Not matched</div><div class="wm-muted">${esc(g.missing.join(', '))}</div>` : '')
-    + (g.rounds?.length ? `<div class="wm-ptitle" style="margin-top:8px">Visual checks</div><ul class="wm-steps">${li(g.rounds.map((r) => r.error || ((r.ok ? 'OK' : '') + (r.remove?.length ? ' remove: ' + r.remove.join(', ') : '') + (r.add?.length ? ' add: ' + r.add.map((a) => a.name || a).join(', ') : '') + (r.note ? ' · ' + r.note : ''))))}</ul>` : '')
-    + `<div class="wm-ptitle" style="margin-top:8px">Steps</div><ol class="wm-steps">${li(g.steps || [])}</ol>`;
+  const g = l.find((x) => x.id === id) || (cur?.id === id ? cur : null); if (!g) { msg('That log was cleared.', true); return; }
+  $('wm-info').innerHTML = `<div class="wm-it">Research log</div><div class="wm-is">${esc(g.cmd)} · ${esc(g.time)}</div>` + logBody(g);
 }
 function wireDel() {
   const vl = document.getElementById('wm-viewlog'); if (vl) vl.onclick = () => { const f = feats.find((x) => x.id === sel); if (f) showLog(f.logId); };
@@ -502,9 +515,10 @@ const yl = (y) => (y < 0 ? `${-y} BCE` : `${y} CE`);
 
 let steps = [], cur = null;
 function saveLog() { if (!cur) return; try { const l = JSON.parse(localStorage.getItem('vn-map-logs') || '[]'); l.unshift(cur); while (l.length > 1 && JSON.stringify(l).length > 1.5e6) l.pop(); localStorage.setItem('vn-map-logs', JSON.stringify(l.slice(0, 30))); } catch {} }
-const step = (t) => { steps.push(t); $('wm-info').innerHTML = '<div class="wm-it">Working…</div><ol class="wm-steps">' + steps.map((x) => `<li>${esc(x)}</li>`).join('') + '</ol>'; msg(t); };
+const step = (t) => { steps.push(t); $('wm-info').innerHTML = '<div class="wm-it">Working…</div><div class="wm-muted">' + esc(t) + '</div><div class="wm-muted">All steps are in the Run log below.</div>'; renderLogs(); msg(t); };
 
 let gemGap = 3500, gemQ = Promise.resolve();
+const deadUntil = {};
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 function gem(parts, opts) { const run = gemQ.then(() => gemOnce(parts, opts)); gemQ = run.catch(() => {}).then(() => sleep(gemGap)); return run; }
 async function gemOnce(parts, { system, search = false, json = !search } = {}) {
@@ -516,7 +530,7 @@ async function gemOnce(parts, { system, search = false, json = !search } = {}) {
   if (search) body.tools = [{ google_search: {} }];
   // One request at a time, spaced out. Rate limits skip ahead, daily limits move to the next key/model at once.
   let j, lastErr = '';
-  const combos = models.flatMap((m) => keys.map((k) => [m, k]));
+  const all = models.flatMap((m) => keys.map((k) => [m, k])), live = all.filter(([m, k]) => !(deadUntil[m + k] > Date.now())), combos = live.length ? live : all;
   outer: for (const [model, key] of combos) {
     for (let a = 0; a < 3; a++) {
       const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify(body) });
@@ -527,7 +541,7 @@ async function gemOnce(parts, { system, search = false, json = !search } = {}) {
       if (!quota && ![500, 503, 504].includes(r.status) && !/demand|overload|unavailable/i.test(lastErr)) throw new Error(lastErr);
       if (quota) gemGap = Math.min(gemGap * 1.6, 15000);
       const hint = parseFloat((JSON.stringify(j.error?.details || '').match(/"retryDelay":"([\d.]+)s"/) || [])[1]);
-      if (/per ?day|daily/i.test(lastErr) || (quota && hint > 25) || a === 2) { step(`${model} …${key.slice(-4)}: ${lastErr.slice(0, 80)}. Trying the next key/model`); break; }
+      if (/per ?day|daily/i.test(lastErr) || (quota && hint > 25) || a === 2) { step(`${model} …${key.slice(-4)}: ${lastErr.slice(0, 80)}. Trying the next key/model`); if (quota) deadUntil[model + key] = Date.now() + 300000; break; }
       const w = quota ? Math.min(Math.max(hint || 8, 3), 25) : [3, 8][a];
       step(`Gemini ${quota ? 'rate limit' : 'busy'} (${model} …${key.slice(-4)}): waiting ${w}s`); await sleep(w * 1000);
     }
@@ -575,7 +589,7 @@ const R = (id, d) => { if (!ringCache.has(id)) ringCache.set(id, allRings(d)); r
 function resolve(r) {
   const n0 = norm(r.name), n = ALIAS[n0] || ALIAS[sq(r.name)] || n0, sn = sq(n), par = norm(String(r.parent || '').split(',')[0]), type = String(r.type || '');
   const T = {
-    india_district: () => { const l = loaded.d?.districts || [], st = (d) => !par || norm(d.s) === par; const x = l.find((d) => norm(d.n) === n && st(d)) || l.find((d) => sq(d.n) === sn && st(d)) || l.find((d) => norm(d.n) === n) || (sn.length >= 6 && l.find((d) => st(d) && lev(sq(d.n), sn) <= 2)); return x && { id: 'd' + x.code + x.n, label: x.n + ', ' + x.s, d: x.d }; },
+    india_district: () => { const l = loaded.d?.districts || [], st = (d) => !par || norm(d.s) === par; const x = l.find((d) => norm(d.n) === n && st(d)) || l.find((d) => sq(d.n) === sn && st(d)) || l.find((d) => norm(d.n) === n) || (sn.length >= 6 && l.find((d) => st(d) && lev(sq(d.n), sn) <= 2)) || (sn.length >= 5 && l.find((d) => st(d) && (sq(d.n).startsWith(sn) || (sq(d.n).length >= 5 && sn.startsWith(sq(d.n)))))); return x && { id: 'd' + x.code + x.n, label: x.n + ', ' + x.s, d: x.d }; },
     india_state: () => { const x = world.india.find((s) => norm(s.n) === n || sq(s.n) === sn) || (sn.length >= 8 && world.india.find((s) => sq(s.n).includes(sn) || sn.includes(sq(s.n)))); return x && { id: 's' + x.n, label: x.n, d: x.d }; },
     world_state: () => { const bc = loaded.f?.byCountry || {}; for (const cc in bc) { const c = world.countries.find((k) => k.id === cc); const s = bc[cc].find((s) => norm(s.n) === n && (!par || !c || norm(c.n) === par || norm(c.f) === par)); if (s) return { id: 'f' + cc + s.n, label: s.n + (c ? ', ' + c.n : ''), d: s.d }; } },
     country: () => { const cand = [sn, ...(CA[sn] || [])], c = world.countries.find((k) => norm(k.n) === n || norm(k.f) === n || cand.includes(sq(k.n)) || cand.includes(sq(k.f))); return c && { id: 'c' + c.id, label: c.n, d: c.d }; },
@@ -659,6 +673,85 @@ async function wikiMaps(subject, keys = []) {
   return { title, images };
 }
 
+// ----- tracing the highlighted area of a map image -----
+function fitAffine(P, T) {
+  const M = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], v = [0, 0, 0];
+  for (let i = 0; i < P.length; i++) { const r = [P[i][0], P[i][1], 1]; for (let a = 0; a < 3; a++) { v[a] += r[a] * T[i]; for (let b = 0; b < 3; b++) M[a][b] += r[a] * r[b]; } }
+  for (let i = 0; i < 3; i++) {
+    let p = i; for (let j = i + 1; j < 3; j++) if (Math.abs(M[j][i]) > Math.abs(M[p][i])) p = j;
+    [M[i], M[p]] = [M[p], M[i]]; [v[i], v[p]] = [v[p], v[i]]; if (Math.abs(M[i][i]) < 1e-12) return null;
+    for (let j = i + 1; j < 3; j++) { const f = M[j][i] / M[i][i]; for (let k = i; k < 3; k++) M[j][k] -= f * M[i][k]; v[j] -= f * v[i]; }
+  }
+  const x = [0, 0, 0]; for (let i = 2; i >= 0; i--) { let t = v[i]; for (let k = i + 1; k < 3; k++) t -= M[i][k] * x[k]; x[i] = t / M[i][i]; } return x;
+}
+function mooreTrace(m, W, H, sx, sy) {
+  const DX = [-1, -1, 0, 1, 1, 1, 0, -1], DY = [0, -1, -1, -1, 0, 1, 1, 1], at = (x, y) => x >= 0 && y >= 0 && x < W && y < H && m[y * W + x] === 1;
+  let cx = sx, cy = sy, bx = sx - 1, by = sy; const out = [[cx, cy]];
+  for (let n = 0; n < W * H; n++) {
+    let bi = 0; for (let d = 0; d < 8; d++) if (cx + DX[d] === bx && cy + DY[d] === by) { bi = d; break; }
+    let moved = false;
+    for (let k = 1; k <= 8; k++) { const d = (bi + k) % 8, nx = cx + DX[d], ny = cy + DY[d]; if (at(nx, ny)) { const pd = (d + 7) % 8; bx = cx + DX[pd]; by = cy + DY[pd]; cx = nx; cy = ny; moved = true; break; } }
+    if (!moved || (cx === sx && cy === sy)) break;
+    out.push([cx, cy]);
+  }
+  return out;
+}
+function simplify(pts, tol) {
+  if (pts.length < 4) return pts;
+  const keep = new Uint8Array(pts.length); keep[0] = keep[pts.length - 1] = 1; const st = [[0, pts.length - 1]];
+  while (st.length) {
+    const [a, b] = st.pop(); let md = 0, mi = -1; const [x1, y1] = pts[a], [x2, y2] = pts[b], dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1;
+    for (let i = a + 1; i < b; i++) { const d = Math.abs(dy * pts[i][0] - dx * pts[i][1] + x2 * y1 - y2 * x1) / L; if (d > md) { md = d; mi = i; } }
+    if (md > tol && mi > 0) { keep[mi] = 1; st.push([a, mi], [mi, b]); }
+  }
+  return pts.filter((_, i) => keep[i]);
+}
+// Gemini finds reference points and the coloured area; the app places the image on the globe and cuts the colour out.
+async function traceWiki(img, subject) {
+  const g = (await gem([{ text: `This is a map image. Subject: "${subject}". Use coordinates x (0 to 1000 from the left edge) and y (0 to 1000 from the top edge). 1) List 6 to 10 control points: clearly identifiable real places in the image (coast corners, river mouths, labelled cities), spread far apart, each with its real latitude and longitude and its x,y position in the image. 2) List 1 to 4 seed points: an x,y position well inside each separately coloured highlighted area that belongs to the subject (not legend swatches, not text). Reply ONLY JSON {"controls":[{"name":"","lat":0,"lon":0,"x":0,"y":0}],"seeds":[{"x":0,"y":0}],"note":""}.` }, { inline_data: { mime_type: img.mime, data: img.data } }])).data;
+  const C = (g?.controls || []).filter((c) => [c.x, c.y, c.lat, c.lon].every(Number.isFinite) && c.x >= 0 && c.x <= 1000 && c.y >= 0 && c.y <= 1000 && Math.abs(c.lat) <= 85 && Math.abs(c.lon) <= 180);
+  if (C.length < 4 || !g?.seeds?.length) throw new Error('Gemini found too few reference points');
+  const mer = (l) => Math.log(Math.tan(Math.PI / 4 + (l * Math.PI) / 360)), unm = (y) => ((2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 180) / Math.PI;
+  const tryFit = (merc) => {
+    let pts = C.slice(), fit = null;
+    for (let it = 0; it < 4; it++) {
+      const P = pts.map((c) => [c.x / 1000, c.y / 1000]), fx = fitAffine(P, pts.map((c) => c.lon)), fy = fitAffine(P, pts.map((c) => (merc ? mer(c.lat) : c.lat)));
+      if (!fx || !fy) return null;
+      const res = pts.map((c, i) => { const [u, v] = P[i], y = fy[0] * u + fy[1] * v + fy[2]; return Math.hypot(fx[0] * u + fx[1] * v + fx[2] - c.lon, (merc ? unm(y) : y) - c.lat); });
+      fit = { fx, fy, merc, res };
+      const sorted = res.slice().sort((a, b) => a - b), med = sorted[Math.floor(sorted.length / 2)], worst = Math.max(...res);
+      if (pts.length > 4 && worst > 3 * med + 0.5) pts = pts.filter((_, i) => res[i] !== worst); else break;
+    }
+    fit.rmse = Math.sqrt(fit.res.reduce((s, r) => s + r * r, 0) / fit.res.length); return fit;
+  };
+  const f = [tryFit(false), tryFit(true)].filter(Boolean).sort((a, b) => a.rmse - b.rmse)[0];
+  const span = Math.max(...C.map((c) => c.lon)) - Math.min(...C.map((c) => c.lon));
+  if (!f || f.rmse > Math.max(1.5, span * 0.05)) throw new Error(`could not place the image on the globe (error ${f ? f.rmse.toFixed(1) : '?'}°)`);
+  const im = new Image(); im.src = `data:${img.mime};base64,${img.data}`; await im.decode();
+  const W = Math.min(im.naturalWidth, 1100), H = Math.round((im.naturalHeight * W) / im.naturalWidth);
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const cx = cv.getContext('2d', { willReadFrequently: true }); cx.drawImage(im, 0, 0, W, H);
+  const px = cx.getImageData(0, 0, W, H).data, rings = [], clamp = (v, m) => Math.min(m - 1, Math.max(0, v));
+  for (const sd of g.seeds.slice(0, 4)) {
+    const sx = clamp(Math.round((sd.x / 1000) * W), W), sy = clamp(Math.round((sd.y / 1000) * H), H), cs = [];
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const o = (clamp(sy + dy, H) * W + clamp(sx + dx, W)) * 4; cs.push([px[o], px[o + 1], px[o + 2]]); }
+    const med = [0, 1, 2].map((k) => cs.map((c) => c[k]).sort((a, b) => a - b)[12]);
+    if (Math.max(...med) - Math.min(...med) < 25) continue; // grey or white: not a highlight
+    const near = (o) => { const dr = px[o] - med[0], dg = px[o + 1] - med[1], db = px[o + 2] - med[2]; return dr * dr + dg * dg + db * db < 1764; };
+    const start = sy * W + sx; if (!near(start * 4)) continue;
+    const comp = new Uint8Array(W * H), q = [start]; comp[start] = 1;
+    for (let h = 0; h < q.length; h++) {
+      const p = q[h], x = p % W, y = (p - x) / W;
+      for (const [ax, ay] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + ax, ny = y + ay; if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue; const np = ny * W + nx; if (!comp[np] && near(np * 4)) { comp[np] = 1; q.push(np); } }
+    }
+    if (q.length < W * H * 0.0005) continue;
+    const first = comp.indexOf(1), edge = simplify(mooreTrace(comp, W, H, first % W, Math.floor(first / W)), 1.5);
+    const co = edge.map(([x, y]) => { const u = x / W, v = y / H, yy = f.fy[0] * u + f.fy[1] * v + f.fy[2]; return [+(f.fx[0] * u + f.fx[1] * v + f.fx[2]).toFixed(3), +(f.merc ? unm(yy) : yy).toFixed(3)]; }).filter((p) => Math.abs(p[0]) <= 180 && Math.abs(p[1]) <= 90);
+    if (co.length >= 3) { const sn = snap(thin(co, 0.03), true); if (sn.length >= 3) rings.push(sn); }
+  }
+  if (!rings.length) throw new Error('no coloured area found to trace');
+  return { rings, rmse: f.rmse, merc: f.merc, n: C.length };
+}
+
 // ----- pipeline -----
 async function simple(cmd, c) {
   step('Tracing the shape with Gemini');
@@ -719,15 +812,26 @@ async function composed(c, cmd) {
   for (const r of sets) {
     if (!r.data?.regions) continue;
     ok++; r.sources.forEach((s) => src.set(s.uri, s)); const seen = new Set();
-    for (const g of r.data.regions.slice(0, 150)) { const k = norm(g.name) + '|' + (g.type || ''); if (seen.has(k)) continue; seen.add(k); const v = votes.get(k) || { ...g, votes: 0 }; v.votes++; votes.set(k, v); }
+    for (const g of r.data.regions.slice(0, 150)) { const k = norm(g.name) + '|' + (g.type || ''); if (seen.has(k)) continue; seen.add(k); const v = votes.get(k) || { ...g, votes: 0 }; v.votes++; if (g.part === 'part') v.part = 'part'; votes.set(k, v); }
   }
   if (!ok) { step('Research failed: ' + String(runs.find((r) => r.status === 'rejected')?.reason?.message || 'unreadable reply').slice(0, 140) + '. Tracing instead'); return simple(cmd, c); }
-  const need = ok >= 3 ? 2 : 1, picked = [...votes.values()].filter((v) => v.votes >= need);
+  const need = ok >= 3 ? 2 : 1; let picked = [...votes.values()].filter((v) => v.votes >= need);
   cur.classify = c; cur.need = need;
   cur.passes = runs.map((r) => r.status === 'fulfilled' ? { regions: r.value.data?.regions, sources: r.value.sources, raw: String(r.value.text).slice(0, 5000) } : { error: String(r.reason?.message) });
   if (wk) cur.passes.push({ wikipedia: true, regions: wk.regions, sources: wk.sources, raw: wk.note || '' });
   cur.votes = [...votes.values()].map((v) => ({ name: v.name, type: v.type, parent: v.parent, part: v.part, votes: v.votes }));
   step(`${ok} pass${ok > 1 ? 'es' : ''} agreed on ${picked.length} regions · ${src.size} web sources`);
+  // A state that was only partly inside is replaced by the districts that were inside.
+  const inState = (r) => (d) => d.type === 'india_district' && norm(String(d.parent || '').split(',')[0]) === norm(r.name);
+  const partials = picked.filter((r) => r.part === 'part' && r.type === 'india_state' && !picked.some(inState(r)));
+  if (partials.length) {
+    step(`Asking which districts were inside the ${partials.length} partly included state${partials.length > 1 ? 's' : ''}`);
+    try {
+      const d = (await gem([{ text: `Subject: "${c.subject || cmd}"${when}. These Indian states were only partly inside its territory: ${partials.map((r) => r.name).join(', ')}. For each, list the 2011 Census districts that were inside. Reply ONLY JSON {"regions":[{"name":"","type":"india_district","parent":"State name","part":"all"}]}. Max 80 regions.` }])).data;
+      for (const g of d?.regions || []) if (g.name) picked.push({ ...g, type: 'india_district', votes: need, part: 'all' });
+    } catch (e) { step('District lookup skipped: ' + String(e.message).slice(0, 80)); }
+  }
+  picked = picked.filter((r) => !(r.part === 'part' && r.type === 'india_state' && picked.some(inState(r))));
   const build = (list) => { const seen = new Set(), used = [], missing = []; for (const r of list) { const h = resolve(r); if (!h) { missing.push(r.name); continue; } if (seen.has(h.id)) continue; if (c.natural && r.part === 'part' && /^[cf]/.test(h.id)) { missing.push(r.name); continue; } seen.add(h.id); used.push({ name: r.name, part: r.part, label: h.label, rings: h.rings }); } return { used, missing }; };
   let { used, missing } = build(picked);
   if (!used.length) { step('No official regions matched, tracing instead'); return simple(cmd, c); }
@@ -745,7 +849,8 @@ async function composed(c, cmd) {
     if (!v) { step('No verdict, keeping the shape'); break; }
     if (v.ok) { step('Gemini: looks right'); break; }
     const rem = new Set((v.remove || []).map((x) => norm(String(x).split(',')[0]))), before = used.length;
-    const kept = used.filter((u) => !rem.has(norm(u.label.split(',')[0])) && !rem.has(norm(u.name)));
+    let kept = used.filter((u) => !rem.has(norm(u.label.split(',')[0])) && !rem.has(norm(u.name)));
+    if (before - kept.length > before * 0.4) { step(`Ignored: Gemini wanted to remove ${before - kept.length} of ${before} regions at once`); kept = used; }
     if (kept.length) used = kept;
     const adds = (v.add || []).map((a) => (typeof a === 'string' ? { name: a } : a)), b2 = build(adds), have = new Set(used.map((u) => u.label));
     let added = 0; for (const u of b2.used) if (!have.has(u.label)) { used.push(u); added++; }
@@ -755,6 +860,12 @@ async function composed(c, cmd) {
     if (!removed && !added) break;
   }
 
+  let traced = null;
+  if (wk) {
+    step('Placing the Wikipedia map on the globe and tracing its coloured area');
+    try { traced = await traceWiki(wk.img, c.subject || cmd); cur.trace = { rmse: traced.rmse, areas: traced.rings.length, file: wk.img.name }; step(`Traced ${traced.rings.length} area${traced.rings.length > 1 ? 's' : ''} · placement error about ${traced.rmse.toFixed(2)}°`); }
+    catch (e) { step('Map tracing skipped: ' + String(e.message).slice(0, 140)); }
+  }
   const rings = flat(), pct = score != null ? Math.round(score * 100) : null;
   const conf = score != null ? (score >= 0.75 ? 'high' : score >= 0.5 ? 'medium' : 'low') : hard ? 'low' : 'medium';
   const flags = [];
@@ -764,6 +875,12 @@ async function composed(c, cmd) {
   const sources = [...src.values()].slice(0, 6);
   cur.used = used.map((u) => u.label); cur.missing = missing; cur.ref = ref ? { name: ref.name, year: ref.year } : null; cur.score = score; cur.flags = flags;
   if (ref) addFeature({ kind: 'area', name: `${ref.name} (reference, ${yl(ref.year)})`, parent: '', note: 'Approximate polygon from the historical-basemaps repo.', ref: true, coords: ref.rings.slice().sort((a, b) => ringArea(b) - ringArea(a))[0], rings: ref.rings });
+  if (traced) addFeature({
+    kind: 'area', name: `${c.subject || cmd} (traced from Wikipedia map)`, parent: '', ai: true, conf: traced.rmse < 1 ? 'high' : traced.rmse < 2 ? 'medium' : 'low',
+    flags: traced.rmse > 2 ? [`Placement error about ${traced.rmse.toFixed(1)}°, edges are rough`] : [], sources: wk.sources, logId: cur.id,
+    note: 'Coloured area cut out of a Wikipedia map image.', method: `Traced from ${wk.img.name} · ${traced.n} reference points · placement error about ${traced.rmse.toFixed(2)}°`,
+    coords: traced.rings.slice().sort((a, b) => ringArea(b) - ringArea(a))[0], rings: traced.rings,
+  });
   const f = addFeature({
     kind: c.kind === 'river' ? 'area' : (KIND[c.kind] ? c.kind : 'area'), name: c.subject || cmd, parent: '', ai: true, conf, flags, sources, logId: cur.id,
     note: `Built from ${used.length} modern regions.${partial.length ? ' Only part of these was inside, whole region shown: ' + partial.slice(0, 8).join(', ') + '.' : ''}`,
@@ -791,14 +908,15 @@ async function run() {
     if (c.tier === 'exists') { $('wm-info').innerHTML = '<div class="wm-muted">' + esc(c.reason || 'Already on the map') + '</div>'; msg(c.reason || 'Already on the map: hover it, or click it and press Use as chapter shape', true); }
     else { step(`Tier: ${c.tier}${c.year != null ? ' · ' + yl(c.year) : ''}`); await (c.tier === 'simple' ? simple(cmd, c) : composed(c, cmd)); }
   } catch (err) { if (cur) cur.error = String(err.message); msg('Error: ' + err.message, true); }
-  saveLog(); $('wm-run').disabled = false;
+  saveLog(); renderLogs(); $('wm-run').disabled = false;
 }
 $('wm-run').onclick = run; $('wm-cmd').addEventListener('keydown', (e) => { if (e.key === 'Enter') run(); });
 window.vnMap = { addFeature, fit, get features() { return feats; } };
 
 // Re-check older saved AI items so they carry a status too.
 for (const f of feats) if (f.ai && !f.flags) f.flags = [];
-setTool('pan'); renderUser(); init();
+$('wm-logclear').onclick = () => { try { localStorage.removeItem('vn-map-logs'); } catch {} renderLogs(); };
+setTool('pan'); renderUser(); renderLogs(); init();
 </script>
 
 <style is:global>
@@ -860,6 +978,14 @@ setTool('pan'); renderUser(); init();
   .wm-badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 500; background: var(--surface); border: 1px solid var(--border); }
   .wm-badge.ok { color: var(--green); border-color: var(--green); background: var(--green-light); }
   .wm-badge.low, .wm-badge.check { color: #C0392B; border-color: #C0392B; }
+  .wm-logview details { border: 1px solid var(--border); border-radius: 8px; background: var(--bg); margin-bottom: 6px; font-size: 12px; }
+  .wm-logview summary { cursor: pointer; padding: 6px 10px; color: var(--ink); }
+  .wm-logview summary small { margin-left: 8px; color: var(--ink-faint); }
+  .wm-logview details[open] summary { border-bottom: 1px solid var(--border); }
+  .wm-logview details > :not(summary) { margin-left: 10px; margin-right: 10px; }
+  .wm-logview details > ol { margin-left: 28px; margin-top: 6px; }
+  .wm-logview details > :last-child { margin-bottom: 8px; }
+  .wm-mini { padding: 2px 8px !important; font-size: 11px !important; margin-left: 6px; text-transform: none; letter-spacing: 0; }
   .wm-steps { margin: 6px 0 0 18px; font-size: 12px; color: var(--ink-muted); }
   .wm-u.ref { fill: #1F5FBF; stroke: #1F5FBF; stroke-dasharray: 8 4; fill-opacity: .12; }
   .wm-flags { margin: 6px 0 0 18px; font-size: 12px; color: #C0392B; }
