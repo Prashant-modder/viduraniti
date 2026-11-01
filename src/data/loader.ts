@@ -314,7 +314,7 @@ export function solutionKeys(pages: Record<string, any>): string[] {
 
 export function loadBook(cls: string, subject: string, bookSlug: string) {
   const prefix = `/src/data/${cls}/${subject}/${bookSlug}/`;
-  const base = `/ncert/class-${cls}/subject:${subject}/${bookSlug}`;
+  const base = `/ncert/class-${cls}/${subject}/${bookSlug}`;
   const units = new Map<string, Unit>();
   let book: any = null;
 

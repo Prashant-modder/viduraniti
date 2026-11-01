@@ -18,7 +18,7 @@ interface Props {
 }
 
 const { bookTitle, bookSlug, bookSub, classNum, subject, units, mode, activeUnit, activeChapter, pageLinks = [], bookLinks = [] } = Astro.props;
-const base = `/ncert/class-${classNum}/subject:${subject}/${bookSlug}`;
+const base = `/ncert/class-${classNum}/${subject}/${bookSlug}`;
 // Folder name is the key: chapter-1-1, chapter-a-1, chapter-8.
 const keyOf = (c: Chapter) => c.href.split('/').pop()!;
 const codeOf = (c: Chapter) => keyOf(c).replace('chapter-', '').toUpperCase();

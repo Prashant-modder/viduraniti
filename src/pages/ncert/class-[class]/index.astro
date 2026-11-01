@@ -13,11 +13,11 @@ const { class: classNum = '' } = Astro.params;
 const subjects = Object.entries(BOOKS[classNum] ?? {}).map(([sub, book]) => {
   const { units } = loadBook(classNum, sub, book.slug);
   const first = units[0];
-  const bookBase = `/ncert/class-${classNum}/subject:${sub}/${book.slug}`;
+  const bookBase = `/ncert/class-${classNum}/${sub}/${book.slug}`;
   const href = first
     ? (first.slug ? `${bookBase}/${first.slug}` : first.chapters[0]?.href)
     : undefined;
-  return { sub, book, href: href ?? `/ncert/class-${classNum}/subject:${sub}` };
+  return { sub, book, href: href ?? `/ncert/class-${classNum}/${sub}` };
 });
 
 const breadcrumb = [

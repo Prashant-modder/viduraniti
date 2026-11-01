@@ -17,7 +17,7 @@ import { BOOKS, SUBJECT_LABELS } from '@/data/books';
 
 export function getStaticPaths() {
   return allRoutes().map((r) => ({
-    params: { class: r.cls, subject: `subject:${r.subject}`, book: r.book, path: r.path },
+    params: { class: r.cls, subject: r.subject, book: r.book, path: r.path },
     props: { kind: r.kind, unitSlug: r.unit, chapterSlug: r.chapter, page: r.page },
   }));
 }
@@ -27,7 +27,7 @@ const { kind, unitSlug, chapterSlug, page } = Astro.props as {
   kind: 'unit' | 'chapter' | 'page' | 'book'; unitSlug: string; chapterSlug: string; page: string;
 };
 
-const subKey = subject.replace('subject:', '');
+const subKey = subject;
 const subLabel = SUBJECT_LABELS[subKey] ?? subKey;
 const bookData = BOOKS[classNum]?.[subKey];
 const { units, bookTerms } = loadBook(classNum, subKey, bookSlug);

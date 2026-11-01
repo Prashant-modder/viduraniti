@@ -7,7 +7,8 @@ import { renderMd } from '@/lib/md';
 type QType = 'short' | 'long' | 'mcq' | 'fill' | 'rectify' | 'activity' | 'blanks' | 'match' | 'order' | 'table';
 type Answer = string | string[] | number[] | string[][];
 
-interface FigureData { svg: string; alt: string; caption?: string }
+interface FigureData { svg: string; src?: string; alt: string; caption?: string;
+}
 
 // A question or a labelled sub-part. Which fields apply depends on `type` (see QA.astro).
 interface Q {

@@ -5,12 +5,12 @@ import { loadBook } from '@/data/loader';
 
 export function getStaticPaths() {
   return Object.entries(BOOKS).flatMap(([cls, subs]) =>
-    Object.keys(subs).map((sub) => ({ params: { class: cls, subject: `subject:${sub}` } }))
+    Object.keys(subs).map((sub) => ({ params: { class: cls, subject: sub } }))
   );
 }
 
 const { class: classNum = '', subject = '' } = Astro.params;
-const subKey = subject.replace('subject:', '');
+const subKey = subject;
 const label = SUBJECT_LABELS[subKey] ?? subKey;
 const book = BOOKS[classNum]?.[subKey];
 
