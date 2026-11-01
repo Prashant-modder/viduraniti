@@ -1,7 +1,7 @@
 export const meta = { title: "Let Us Listen", order: 5, tags: ["Solutions", "Listening"] };
 
-// NOTE: both answers depend on the audio transcript (teacher's copy, page 39 of the textbook).
-// They are marked pending: true until the transcript is added.
+// Answers are based on the teacher's transcript (textbook pages 39-40).
+// Part II: (ii) -> 5 is the loosest fit - none of the seven statements matches the grandmother exactly.
 
 export const sections = [
   {
@@ -9,9 +9,13 @@ export const sections = [
     instruction: "You will listen to five people speak about school life. As you listen, circle the words from the box that the speakers use. Two of the words are not needed. (The transcript for the teacher is on page 39.)",
     items: [
       {
-        n: 1, type: "short", pending: true,
+        n: 1, type: "short",
         question: "Which of these words do the speakers use? lawyer, desks, homemaker, principal, posters, newspapers, marriage, advertisements, careers, books",
-        answer: "*(Answer key pending - it depends on the audio transcript on page 39 of the textbook.)*"
+        answer: [
+          "**Words used:** **careers** and **homemaker** (Speaker i, the father) and **books** (Speaker iv, the student).",
+          "**Not used:** lawyer, desks, posters, newspapers, marriage, advertisements.",
+          "*'Principal' is only the role of Speaker (v); the speaker calls herself or himself the 'Head of an institution'.*"
+        ]
       }
     ]
   },
@@ -20,7 +24,7 @@ export const sections = [
     instruction: "Listen to the five speakers once again. As you listen, match each statement (1-7) to a speaker (i)-(v). Two statements are not needed.",
     items: [
       {
-        n: 1, type: "match", pending: true,
+        n: 1, type: "match",
         question: "Match the statements to the speakers.",
         left: [
           "1. Promotes active participation for all in school activities",
@@ -31,8 +35,21 @@ export const sections = [
           "6. Persuades the parent to grant permission to attend school",
           "7. Believes that learning skills is not gender-based"
         ],
-        right: ["Speaker (i)", "Speaker (ii)", "Speaker (iii)", "Speaker (iv)", "Speaker (v)"],
-        answer: "*(Answer key pending - it depends on the audio transcript on page 39 of the textbook.)*"
+        right: [
+          "Speaker (i) - Father",
+          "Speaker (ii) - Grandmother",
+          "Speaker (iii) - Teacher",
+          "Speaker (iv) - Student",
+          "Speaker (v) - Principal"
+        ],
+        answer: [
+          "**(i) Father -> 3.** He says education gives freedom to make choices in life, whether his daughter or his son wants a career or to be a homemaker.",
+          "**(ii) Grandmother -> 5.** She recalls that elders once treated girls and boys differently and kept girls at home to help, and she is glad that this has changed.",
+          "**(iii) Teacher -> 7.** She talks about learning hands-on skills and giving equal respect to all kinds of work.",
+          "**(iv) Student -> 4.** School gives her friends with whom she can share her feelings.",
+          "**(v) Principal -> 1.** Students should take part in every school activity without worrying whether it is for girls or boys.",
+          "**Not needed:** statements **2** and **6**."
+        ]
       }
     ]
   }
