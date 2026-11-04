@@ -5,7 +5,7 @@ export const chapter = {
   unit: "unit-1",
   author: "Kamala Nair",
   related: [
-    { label: "Ch 1-2 Â· Try Again", href: "/ncert/class-7/english/poorvi/unit-1/chapter-1-2" },
-    { label: "Ch 1-3 Â· Three Days to See", href: "/ncert/class-7/english/poorvi/unit-1/chapter-1-3" }
+    { label: "Ch 2-2 · Try Again", href: "/ncert/class-7/subject:english/poorvi/unit-1/chapter-2-2" },
+    { label: "Ch 3-3 · Three Days to See", href: "/ncert/class-7/subject:english/poorvi/unit-1/chapter-3-3" }
   ]
 };
