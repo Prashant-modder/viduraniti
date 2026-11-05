@@ -310,12 +310,12 @@ function renderLogs() {
   let l = []; try { l = JSON.parse(localStorage.getItem('vn-map-logs') || '[]'); } catch {}
   const open = new Set([...box.querySelectorAll('details[open]')].map((d) => d.dataset.id));
   const all = cur && !l.some((x) => x.id === cur.id) ? [cur, ...l] : l;
-  box.innerHTML = all.length ? all.map((g, i) => `<details class="wm-run" data-id="${esc(g.id)}"${open.has(g.id) || (i === 0 && !open.size) ? ' open' : ''}><summary>${esc(String(g.cmd).slice(0, 55))}<small>${esc(String(g.time).slice(11, 16))}${g.error ? ' · error' : ''}</small></summary>${logBody(g)}</details>`).join('') : '<div class="wm-muted">Runs will appear here.</div>';
+  box.innerHTML = all.length ? all.map((g, i) => `<details class="wm-run" data-id="${esc(g.id)}"${open.has(g.id) || (i === 0 && !open.size) ? ' open' : ''}><summary>${esc(String(g.cmd).slice(0, 55))}<small>${esc(new Date(g.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}${g.error ? ' · error' : ''}</small></summary>${logBody(g)}</details>`).join('') : '<div class="wm-muted">Runs will appear here.</div>';
 }
 function showLog(id) {
   let l = []; try { l = JSON.parse(localStorage.getItem('vn-map-logs') || '[]'); } catch {}
   const g = l.find((x) => x.id === id) || (cur?.id === id ? cur : null); if (!g) { msg('That log was cleared.', true); return; }
-  $('wm-info').innerHTML = `<div class="wm-it">Research log</div><div class="wm-is">${esc(g.cmd)} · ${esc(g.time)}</div>` + logBody(g);
+  $('wm-info').innerHTML = `<div class="wm-it">Research log</div><div class="wm-is">${esc(g.cmd)} · ${esc(new Date(g.time).toLocaleString())}</div>` + logBody(g);
 }
 function wireDel() {
   const vl = document.getElementById('wm-viewlog'); if (vl) vl.onclick = () => { const f = feats.find((x) => x.id === sel); if (f) showLog(f.logId); };
@@ -791,7 +791,7 @@ async function composed(c, cmd) {
   };
   const wikiTask = (async () => {
     try {
-      const w = await wikiMaps(c.subject || cmd, String(c.polity || '').split(',').map((x) => x.trim()).filter(Boolean));
+      const w = await wikiMaps(c.subject || cmd, (c.natural ? [String(c.subject || cmd).replace(/\b\d{3,4}\b/g, '').trim()] : String(c.polity || '').split(',').map((x) => x.trim()).filter(Boolean)));
       if (!w || !w.images.length) { step('Wikipedia: no map images found' + (w ? ` in "${w.title}"` : '')); return null; }
       step(`Wikipedia "${w.title}": reading ${w.images.length} map image${w.images.length > 1 ? 's' : ''} and noting the coloured areas`);
       const txt = `Candidate maps from the Wikipedia article "${w.title}", images 1 to ${w.images.length} in this order: ${w.images.map((i) => i.name).join(' | ')}. Subject: "${c.subject || cmd}"${when}. Pick the map that best shows this subject at that time, where the territory is highlighted in a colour against a neutral background. Notice which areas are highlighted and list the modern regions that are highlighted. ${unit} Reply ONLY JSON {"best":1-based index or null if no map fits,"regions":[{"name":"","type":"india_district"|"india_state"|"world_state"|"country","parent":"","part":"all"|"part"}],"note":""}.`;
