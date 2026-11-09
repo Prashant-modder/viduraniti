@@ -60,7 +60,7 @@ const tableAnswer = t === 'table' && Array.isArray(answer) ? (answer as unknown 
     </div>
   )}
 
-  {figure && <Figure svg={figure.svg} src={figure.src} alt={figure.alt} caption={figure.caption} />}
+  {figure && <Figure svg={figure.svg} alt={figure.alt} caption={figure.caption} />}
 
   <WordBox words={wordBox} />
 
@@ -91,7 +91,7 @@ const tableAnswer = t === 'table' && Array.isArray(answer) ? (answer as unknown 
     ) : (
       <Prose md={textAnswer} />
     )}
-    {answerFigure && <Figure svg={answerFigure.svg} src={answerFigure.src} alt={answerFigure.alt} caption={answerFigure.caption} />}
+    {answerFigure && <Figure svg={answerFigure.svg} alt={answerFigure.alt} caption={answerFigure.caption} />}
   </div>
 
   <div class="answer-actions">
