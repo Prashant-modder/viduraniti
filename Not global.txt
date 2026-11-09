@@ -1,0 +1,5 @@
+Not global
+make a globe version
+add color variation to represent geography
+
+514:402
