@@ -25,7 +25,7 @@ export const person = {
     facts: [
         { label: "Born", value: "13 February 1879, Hyderabad" },
         { label: "Died", value: "2 March 1949, Lucknow" },
-        { label: "Known as", value: "The Nightingale of India (Bharat Kokila)" },
+        { label: "Known as", value: "The Nightingale of India (Bharat Kokila, bulbul-e-hind,and prachya jagatara )" },
         { label: "Known for", value: "Poetry, the freedom struggle and women's rights" },
         { label: "Firsts", value: "First Indian woman President of the Indian National Congress (1925). First woman Governor of an Indian state (1947)." },
     ],
