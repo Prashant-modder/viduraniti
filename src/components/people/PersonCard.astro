@@ -1,0 +1,44 @@
+---
+// One person in the list: a round picture (or initials), name, years, one line, category.
+// The data-* attributes are what the search box and the chips in PeopleList filter on.
+interface Props {
+  person: {
+    slug: string; name: string; years?: string; tagline?: string;
+    categories: string[]; image?: string | null;
+  };
+  labels: Record<string, string>;
+}
+const { person, labels } = Astro.props;
+const first = person.categories[0];
+const initials = person.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+const haystack = [person.name, person.tagline ?? '', ...person.categories.map((c) => labels[c] ?? c)]
+  .join(' ')
+  .toLowerCase();
+---
+
+<a class="pc" href={`/ncert/people/${person.slug}`} data-cats={person.categories.join(' ')} data-search={haystack}>
+  <div class="pc-pic">
+    <span>{initials}</span>
+    {person.image && <img src={person.image} alt="" loading="lazy" onerror="this.style.display='none'" />}
+  </div>
+  <div class="pc-body">
+    <div class="pc-name">{person.name}</div>
+    {person.years && <div class="pc-years">{person.years}</div>}
+    {person.tagline && <div class="pc-tag">{person.tagline}</div>}
+    {first && <div class="pc-cat">{labels[first] ?? first}</div>}
+  </div>
+</a>
+
+<style>
+  .pc { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--ink); text-decoration: none; transition: border-color .15s; }
+  .pc[hidden] { display: none; }
+  .pc:hover { border-color: var(--saffron); }
+  .pc:focus-visible { outline: 2px solid var(--saffron); outline-offset: 2px; }
+  .pc-pic { position: relative; width: 56px; height: 56px; flex-shrink: 0; border-radius: 50%; overflow: hidden; background: var(--saffron-light); display: flex; align-items: center; justify-content: center; font-family: var(--font-ui); font-weight: 600; color: var(--tag-text); }
+  .pc-pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .pc-body { min-width: 0; font-family: var(--font-ui); }
+  .pc-name { font-size: 15px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+  .pc-years { font-size: 12px; color: var(--ink-muted); }
+  .pc-tag { font-size: 13px; color: var(--ink-muted); margin-top: 4px; line-height: 1.4; }
+  .pc-cat { font-size: 11px; font-weight: 500; color: var(--saffron); margin-top: 6px; }
+</style>

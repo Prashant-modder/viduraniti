@@ -1,0 +1,15 @@
+---
+// A titled block with an id, so the sidebar and the "On this page" chips can jump to it.
+interface Props { id: string; title: string }
+const { id, title } = Astro.props;
+---
+
+<section class="ps" id={id}>
+  <h2 class="ps-title">{title}</h2>
+  <slot />
+</section>
+
+<style>
+  .ps { margin-top: 36px; max-width: 68ch; }
+  .ps-title { font-family: var(--font-ui); font-size: 20px; font-weight: 600; line-height: 1.3; color: var(--ink); padding-left: 12px; border-left: 4px solid var(--saffron); margin-bottom: 12px; }
+</style>

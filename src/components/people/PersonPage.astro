@@ -1,0 +1,112 @@
+---
+// One identity = one page. Header, facts card, then every section in order.
+// The section list comes from sectionsOf() in src/lib/people.ts (same list the sidebar uses).
+import Prose from '@/components/Prose.astro';
+import ContentCard from '@/components/ContentCard.astro';
+import PersonSection from './PersonSection.astro';
+import PersonTimeline from './PersonTimeline.astro';
+import FactsCard from './FactsCard.astro';
+import { CATEGORIES } from '@/lib/people';
+import type { PersonEntry, NavLink } from '@/lib/people';
+
+interface Props { entry: PersonEntry; prev?: NavLink | null; next?: NavLink | null }
+const { entry, prev, next } = Astro.props;
+
+const p = entry.person;
+const sections = entry.sections;
+const cats: string[] = entry.meta.categories ?? [];
+const eyebrow = cats.map((c) => CATEGORIES[c] ?? c).join(' / ');
+const tags: string[] = entry.meta.tags ?? [];
+const isDraft = entry.meta.status === 'draft';
+const reportHref = `/report?page=${encodeURIComponent(Astro.url.pathname)}`;
+---
+
+<header class="pp-head">
+  <div class="pp-head-text">
+    {eyebrow && <div class="pp-eyebrow">{eyebrow}</div>}
+    <h1 class="pp-title">{p.name}</h1>
+    {p.alsoKnownAs && <div class="pp-aka">{p.alsoKnownAs}</div>}
+    {p.years && <div class="pp-years">{p.years}</div>}
+    {p.tagline && <p class="pp-tagline">{p.tagline}</p>}
+    {tags.length > 0 && <div class="pp-tags">{tags.map((t) => <span class="pp-tag">{t}</span>)}</div>}
+    {isDraft && <div class="pp-draft">Draft: visible only while running npm run dev</div>}
+  </div>
+  {entry.image && (
+    <figure class="pp-fig">
+      <img src={entry.image} alt={p.imageAlt ?? p.name} onerror="this.parentElement.style.display='none'" />
+      {p.imageCredit && <figcaption>{p.imageCredit}</figcaption>}
+    </figure>
+  )}
+</header>
+
+<FactsCard facts={p.facts ?? []} />
+
+{sections.length > 1 && (
+  <div class="pp-outline" role="navigation" aria-label="On this page">
+    <span>On this page</span>
+    {sections.map((s) => <a href={`#${s.id}`}>{s.label}</a>)}
+  </div>
+)}
+
+{sections.map((s) => (
+  <PersonSection id={s.id} title={s.label}>
+    {s.kind === 'text' && s.body && <Prose md={s.body} />}
+    {s.kind === 'text' && s.card && <ContentCard card={{ type: 'remember', text: s.card }} />}
+    {s.kind === 'timeline' && <PersonTimeline events={s.items ?? []} />}
+    {s.kind === 'related' && (
+      <div class="vn-list">
+        {(s.items ?? []).map((r: any) => <a class="vn-row" href={r.href}><span>{r.label}</span></a>)}
+      </div>
+    )}
+  </PersonSection>
+))}
+
+{sections.length === 0 && <p class="vn-muted">This page is still being written.</p>}
+
+<footer class="pp-foot">
+  <p>A short bio sketch written by ViduraNiti in its own words, as a study aid.</p>
+  <a href={reportHref}>Report an error</a>
+</footer>
+
+{(prev || next) && (
+  <div class="pp-nav">
+    {prev ? <a href={prev.href}>&larr; {prev.label}</a> : <span></span>}
+    {next ? <a href={next.href}>{next.label} &rarr;</a> : <span></span>}
+  </div>
+)}
+
+<style>
+  .pp-head { display: flex; gap: 24px; align-items: flex-start; justify-content: space-between; padding-bottom: 24px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+  .pp-head-text { flex: 1; min-width: 0; max-width: 68ch; }
+  .pp-eyebrow { font-family: var(--font-ui); font-size: 12px; color: var(--ink-muted); margin-bottom: 8px; }
+  .pp-title { font-size: 28px; font-weight: 600; line-height: 1.25; color: var(--ink); }
+  .pp-aka { font-family: var(--font-ui); font-size: 14px; font-weight: 500; color: var(--saffron); margin-top: 4px; }
+  .pp-years { font-family: var(--font-ui); font-size: 13px; color: var(--ink-muted); margin-top: 4px; }
+  .pp-tagline { margin-top: 12px; font-size: 17px; line-height: 1.6; color: var(--ink); }
+  .pp-tags { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .pp-tag { font-family: var(--font-ui); font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 999px; background: var(--surface); color: var(--ink-muted); border: 1px solid var(--border); }
+  .pp-draft { display: inline-block; margin-top: 12px; padding: 3px 10px; border: 1px dashed var(--saffron); border-radius: 6px; background: var(--saffron-light); font-family: var(--font-ui); font-size: 12px; color: var(--tag-text); }
+  .pp-fig { width: 160px; flex-shrink: 0; margin: 0; }
+  .pp-fig img { display: block; width: 100%; height: auto; border-radius: 10px; }
+  .pp-fig figcaption { margin-top: 4px; font-family: var(--font-ui); font-size: 11px; line-height: 1.4; color: var(--ink-muted); }
+
+  .pp-outline { display: none; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 20px; font-family: var(--font-ui); font-size: 12px; color: var(--ink-muted); }
+  .pp-outline a { padding: 2px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--ink); text-decoration: none; }
+  .pp-outline a:hover { border-color: var(--saffron); }
+
+  .pp-foot { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border); display: flex; gap: 16px; justify-content: space-between; align-items: baseline; flex-wrap: wrap; font-family: var(--font-ui); font-size: 12px; color: var(--ink-faint); line-height: 1.5; }
+  .pp-foot p { max-width: 62ch; }
+  .pp-foot a { color: var(--saffron); text-decoration: none; font-weight: 500; white-space: nowrap; }
+  .pp-nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 32px; padding-bottom: 60px; }
+  .pp-nav a { font-family: var(--font-ui); font-size: 14px; font-weight: 500; color: var(--ink); text-decoration: none; padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; transition: border-color .15s, background .15s; }
+  .pp-nav a:hover { border-color: var(--saffron); background: var(--surface); }
+
+  @media (max-width: 768px) {
+    .pp-outline { display: flex; }
+    .pp-nav { flex-direction: column; }
+  }
+  @media (max-width: 480px) {
+    .pp-head { flex-direction: column-reverse; }
+    .pp-fig { width: 120px; }
+  }
+</style>

@@ -1,0 +1,78 @@
+---
+// The /ncert/people page body: a search box, category chips and a grid of cards.
+import PersonCard from './PersonCard.astro';
+
+interface Item {
+  slug: string; name: string; years?: string; tagline?: string;
+  categories: string[]; image?: string | null;
+}
+interface Props { people: Item[]; categories: Record<string, string> }
+const { people, categories } = Astro.props;
+// Only offer chips for categories that someone actually has.
+const present = Object.entries(categories).filter(([k]) => people.some((p) => p.categories.includes(k)));
+---
+
+{people.length > 0 ? (
+  <>
+    <div class="pl-tools">
+      <input id="pp-search" type="search" placeholder="Search people" aria-label="Search people" />
+    </div>
+    <div class="pl-chips" id="pp-chips">
+      <button type="button" class="on" data-cat="">All</button>
+      {present.map(([k, label]) => <button type="button" data-cat={k}>{label}</button>)}
+    </div>
+    <p class="pl-count" id="pp-count">{people.length} {people.length === 1 ? 'person' : 'people'}</p>
+    <div class="pl-grid">
+      {people.map((p) => <PersonCard person={p} labels={categories} />)}
+    </div>
+    <p class="vn-muted pl-none" id="pp-none" hidden>No one matches. Try another word or choose All.</p>
+  </>
+) : (
+  <p class="vn-muted">People coming soon.</p>
+)}
+
+<script>
+  const search = document.getElementById('pp-search') as HTMLInputElement | null;
+  const chips = document.querySelectorAll<HTMLButtonElement>('#pp-chips button');
+  const cards = document.querySelectorAll<HTMLElement>('.pc');
+  const count = document.getElementById('pp-count');
+  const none = document.getElementById('pp-none');
+  let cat = '';
+
+  const apply = () => {
+    const q = (search?.value ?? '').trim().toLowerCase();
+    let n = 0;
+    cards.forEach((c) => {
+      const okCat = !cat || (c.dataset.cats ?? '').split(' ').includes(cat);
+      const okQ = !q || (c.dataset.search ?? '').includes(q);
+      c.hidden = !(okCat && okQ);
+      if (!c.hidden) n++;
+    });
+    if (count) count.textContent = `${n} ${n === 1 ? 'person' : 'people'}`;
+    if (none) none.hidden = n > 0;
+  };
+
+  search?.addEventListener('input', apply);
+  chips.forEach((b) =>
+    b.addEventListener('click', () => {
+      cat = b.dataset.cat ?? '';
+      chips.forEach((x) => x.classList.toggle('on', x === b));
+      apply();
+    })
+  );
+</script>
+
+<style>
+  .pl-tools { display: flex; max-width: 68ch; margin-bottom: 10px; }
+  .pl-tools input { flex: 1; min-width: 0; font-family: var(--font-ui); font-size: 14px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--ink); }
+  .pl-tools input:focus { outline: 2px solid var(--saffron); outline-offset: 1px; }
+  .pl-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .pl-chips button { font-family: var(--font-ui); font-size: 13px; font-weight: 500; padding: 5px 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--ink); cursor: pointer; }
+  .pl-chips button:hover { border-color: var(--saffron); }
+  .pl-chips button.on { background: var(--saffron-light); border-color: var(--saffron); }
+  .pl-chips button:focus-visible { outline: 2px solid var(--saffron); outline-offset: 2px; }
+  .pl-count { font-family: var(--font-ui); font-size: 12px; color: var(--ink-faint); margin-bottom: 16px; }
+  .pl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; max-width: 960px; }
+  .pl-none { margin-top: 16px; }
+  .pl-none[hidden] { display: none; }
+</style>

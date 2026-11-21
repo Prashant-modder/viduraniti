@@ -1,0 +1,34 @@
+---
+// /ncert/people : everyone, with search and category chips.
+import PeopleLayout from '@/components/people/PeopleLayout.astro';
+import PeopleList from '@/components/people/PeopleList.astro';
+import { loadPeople, CATEGORIES } from '@/lib/people';
+
+const people = loadPeople().map((e) => ({
+  slug: e.slug,
+  name: e.person.name,
+  years: e.person.years,
+  tagline: e.person.tagline,
+  categories: (e.meta.categories ?? []) as string[],
+  image: e.image,
+}));
+
+const breadcrumb = [
+  { label: 'Home', href: '/' },
+  { label: 'NCERT', href: '/ncert' },
+  { label: 'People' },
+];
+---
+
+<PeopleLayout title="People" breadcrumb={breadcrumb}>
+  <div class="pg-head">
+    <p class="vn-eyebrow">NCERT</p>
+    <h1 class="vn-title">People</h1>
+    <p class="vn-muted">Short bio sketches of freedom fighters, women who shaped history, and other well-known people.</p>
+  </div>
+  <PeopleList people={people} categories={CATEGORIES} />
+</PeopleLayout>
+
+<style>
+  .pg-head { font-family: var(--font-ui); margin-bottom: 24px; }
+</style>

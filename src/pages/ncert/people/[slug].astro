@@ -1,0 +1,24 @@
+---
+// /ncert/people/{slug} : one person, one page.
+import PeopleLayout from '@/components/people/PeopleLayout.astro';
+import PersonPage from '@/components/people/PersonPage.astro';
+import { loadPeople, neighbours } from '@/lib/people';
+
+export function getStaticPaths() {
+  return loadPeople().map((e) => ({ params: { slug: e.slug }, props: { entry: e } }));
+}
+
+const { entry } = Astro.props as { entry: any };
+const { prev, next } = neighbours(entry.slug);
+
+const breadcrumb = [
+  { label: 'Home', href: '/' },
+  { label: 'NCERT', href: '/ncert' },
+  { label: 'People', href: '/ncert/people' },
+  { label: entry.person.name },
+];
+---
+
+<PeopleLayout title={entry.person.name} breadcrumb={breadcrumb} activeSlug={entry.slug} sections={entry.sections}>
+  <PersonPage entry={entry} prev={prev} next={next} />
+</PeopleLayout>

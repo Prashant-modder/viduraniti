@@ -1,0 +1,31 @@
+---
+// A vertical timeline of a person's life: date on the left, title and a line of text on the right.
+// Events are shown in the order given. `end` makes a range like 1930-1931.
+import { renderInline } from '@/lib/md';
+
+interface Ev { date: string; end?: string; title: string; text?: string }
+interface Props { events: Ev[] }
+const { events = [] } = Astro.props;
+---
+
+<ol class="pt">
+  {events.map((e) => (
+    <li class="pt-item">
+      <div class="pt-date">{e.end ? `${e.date}\u2013${e.end}` : e.date}</div>
+      <div class="pt-body">
+        <div class="pt-title" set:html={renderInline(e.title)} />
+        {e.text && <div class="pt-text" set:html={renderInline(e.text)} />}
+      </div>
+    </li>
+  ))}
+</ol>
+
+<style>
+  .pt { list-style: none; max-width: 68ch; margin: 8px 0 0 6px; padding-left: 4px; border-left: 2px solid var(--border); }
+  .pt-item { position: relative; display: grid; grid-template-columns: 96px 1fr; gap: 14px; padding: 10px 0 10px 18px; }
+  .pt-item::before { content: ''; position: absolute; left: -9px; top: 17px; width: 10px; height: 10px; border-radius: 50%; background: var(--saffron); }
+  .pt-date { font-family: var(--font-ui); font-size: 14px; font-weight: 600; color: var(--saffron); }
+  .pt-title { font-family: var(--font-ui); font-size: 16px; font-weight: 600; color: var(--ink); }
+  .pt-text { font-size: 15px; line-height: 1.6; color: var(--ink-muted); margin-top: 2px; }
+  @media (max-width: 480px) { .pt-item { grid-template-columns: 1fr; gap: 2px; } }
+</style>

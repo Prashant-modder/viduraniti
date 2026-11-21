@@ -1,0 +1,32 @@
+---
+// Frame for every People page: site layout + sidebar on the left + content on the right.
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import PeopleSidebar from './PeopleSidebar.astro';
+import { groupedPeople } from '@/lib/people';
+
+interface Crumb { label: string; href?: string }
+interface Props {
+  title: string;
+  breadcrumb?: Crumb[];
+  activeSlug?: string;                          // the open person, if any
+  sections?: { id: string; label: string }[];   // that person's sections, shown under their name
+}
+const { title, breadcrumb = [], activeSlug, sections = [] } = Astro.props;
+const groups = groupedPeople();
+---
+
+<BaseLayout title={title} breadcrumb={breadcrumb}>
+  <div class="lay-shell">
+    <PeopleSidebar groups={groups} activeSlug={activeSlug} sections={sections} />
+    <main class="lay-main"><slot /></main>
+  </div>
+</BaseLayout>
+
+<style>
+  .lay-shell { display: flex; margin-top: 52px; min-height: calc(100vh - 52px); }
+  .lay-main { flex: 1; min-width: 0; padding: 32px 40px; }
+  @media (max-width: 768px) {
+    .lay-shell { display: block; }
+    .lay-main { padding: 20px 16px; }
+  }
+</style>

@@ -1,0 +1,94 @@
+---
+// Left sidebar for the People branch.
+// Groups people by category. The open person is highlighted and their sections are listed under
+// their name; the section you are reading is highlighted as you scroll.
+// NOTE: never use a <nav> tag here. global.css styles every <nav> as the fixed top bar.
+interface Group { key: string; label: string; people: { slug: string; name: string; years?: string }[] }
+interface Props { groups: Group[]; activeSlug?: string; sections?: { id: string; label: string }[] }
+const { groups, activeSlug, sections = [] } = Astro.props;
+---
+
+<aside class="sidebar">
+  <div class="sb-head">
+    <div class="sb-label">NCERT</div>
+    <a class="sb-title" href="/ncert/people">People</a>
+    <div class="sb-sub">Bio sketches</div>
+  </div>
+
+  {groups.map((g) => (
+    <div class="sb-group">
+      <div class="sb-group-label">{g.label}</div>
+      <div class="sb-list">
+        {g.people.map((p) => (
+          <>
+            <a href={`/ncert/people/${p.slug}`} class={p.slug === activeSlug ? 'active' : ''}>{p.name}</a>
+            {p.slug === activeSlug && sections.length > 0 && (
+              <div class="sb-sections">
+                {sections.map((s) => <a href={`#${s.id}`} data-sec={s.id}>{s.label}</a>)}
+              </div>
+            )}
+          </>
+        ))}
+      </div>
+    </div>
+  ))}
+
+  {groups.length === 0 && <p class="sb-empty">No people yet.</p>}
+</aside>
+
+<script>
+  // Highlight the section that is currently on screen.
+  const links = document.querySelectorAll<HTMLAnchorElement>('.sb-sections a[data-sec]');
+  if (links.length > 0) {
+    const mark = (id: string) =>
+      links.forEach((a) => a.classList.toggle('current', a.dataset.sec === id));
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) if (e.isIntersecting) mark((e.target as HTMLElement).id);
+      },
+      { rootMargin: '-15% 0px -70% 0px' }
+    );
+    links.forEach((a) => {
+      const el = document.getElementById(a.dataset.sec ?? '');
+      if (el) io.observe(el);
+    });
+  }
+</script>
+
+<style>
+  .sidebar {
+    position: sticky; top: 52px; height: calc(100vh - 52px); overflow-y: auto;
+    border-right: 1px solid var(--border); background: var(--bg);
+    padding: 20px 0; width: 260px; flex-shrink: 0;
+  }
+  .sb-head { padding: 0 16px 16px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+  .sb-label { font-family: var(--font-ui); font-size: 11px; color: var(--ink-faint); margin-bottom: 4px; }
+  .sb-title { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--ink); text-decoration: none; }
+  .sb-title:hover { color: var(--saffron); }
+  .sb-sub { font-family: var(--font-ui); font-size: 12px; color: var(--ink-muted); }
+  .sb-group { margin-bottom: 4px; }
+  .sb-group-label {
+    font-family: var(--font-ui); font-size: 11px; font-weight: 600;
+    color: var(--ink-faint); text-transform: uppercase; letter-spacing: .06em;
+    padding: 8px 16px 4px;
+  }
+  .sb-list { display: flex; flex-direction: column; }
+  .sb-list > a {
+    font-family: var(--font-ui); font-size: 13px; color: var(--ink-muted);
+    text-decoration: none; padding: 5px 16px; border-left: 2px solid transparent;
+    transition: all .15s;
+  }
+  .sb-list > a:hover { color: var(--ink); background: var(--surface); }
+  .sb-list > a.active { color: var(--ink); font-weight: 500; border-left-color: var(--saffron); background: var(--saffron-light); }
+  .sb-sections { padding: 2px 16px 4px 28px; display: flex; flex-direction: column; gap: 1px; }
+  .sb-sections a {
+    font-family: var(--font-ui); font-size: 12px; color: var(--ink-muted);
+    text-decoration: none; padding: 3px 8px; border-radius: 4px;
+  }
+  .sb-sections a:hover { background: var(--surface); color: var(--ink); }
+  .sb-sections a.current { color: var(--saffron); background: var(--saffron-light); font-weight: 500; }
+  .sb-empty { padding: 8px 16px; font-family: var(--font-ui); font-size: 13px; color: var(--ink-muted); }
+  .sidebar a:focus-visible { outline: 2px solid var(--saffron); outline-offset: -2px; }
+
+  @media (max-width: 768px) { .sidebar { display: none; } }
+</style>

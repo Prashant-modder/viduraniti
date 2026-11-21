@@ -1,0 +1,29 @@
+---
+// The quick-facts box at the top of a person page: label + value rows. Rows with no value are skipped.
+// Values accept inline Markdown (*italic*, **bold**).
+import { renderInline } from '@/lib/md';
+
+interface Fact { label: string; value: string }
+interface Props { facts: Fact[] }
+const { facts = [] } = Astro.props;
+const rows = facts.filter((f) => f?.label && f?.value);
+---
+
+{rows.length > 0 && (
+  <dl class="fc">
+    {rows.map((f) => (
+      <div class="fc-row">
+        <dt>{f.label}</dt>
+        <dd set:html={renderInline(f.value)} />
+      </div>
+    ))}
+  </dl>
+)}
+
+<style>
+  .fc { max-width: 68ch; display: flex; flex-direction: column; gap: 6px; padding: 12px 16px; border: 1px solid var(--border); border-left: 3px solid var(--saffron); border-radius: 0 8px 8px 0; background: var(--surface); font-family: var(--font-ui); }
+  .fc-row { display: grid; grid-template-columns: 110px 1fr; gap: 12px; font-size: 14px; line-height: 1.5; }
+  .fc dt { color: var(--ink-muted); font-weight: 500; }
+  .fc dd { color: var(--ink); margin: 0; }
+  @media (max-width: 480px) { .fc-row { grid-template-columns: 1fr; gap: 0; } }
+</style>
