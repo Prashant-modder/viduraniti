@@ -4,11 +4,12 @@ import Prose from './Prose.astro';
 import WordBox from './qa/WordBox.astro';
 import { renderMd } from '@/lib/md';
 
-type QType = 'short' | 'long' | 'mcq' | 'fill' | 'rectify' | 'activity' | 'blanks' | 'match' | 'order' | 'table';
-type Answer = string | string[] | number[] | string[][];
+type QType = 'short' | 'long' | 'mcq' | 'fill' | 'rectify' | 'activity' | 'blanks' | 'match' | 'order' | 'table' | 'crossword';
+type Cell = string | { text: string; rowspan?: number; colspan?: number };
+type Answer = string | string[] | number[] | Cell[][];
 
-interface FigureData { svg: string; src?: string; alt: string; caption?: string;
-}
+interface FigureData { svg?: string; src?: string; alt: string; caption?: string }
+interface CwEntry { n: number; dir: 'across' | 'down'; row: number; col: number; answer: string; clue?: string }
 
 // A question or a labelled sub-part. Which fields apply depends on `type` (see QA.astro).
 interface Q {
@@ -19,11 +20,19 @@ interface Q {
   example?: string;
   left?: string[];
   right?: string[];
+  leftHead?: string;
+  rightHead?: string;
+  leftLabels?: string[];      // labels as printed for Column 1, e.g. ["1","2","3"]
+  rightLabels?: string[];     // labels as printed for Column 2, e.g. ["(i)","(ii)","(iii)"]
   items?: string[];
   columns?: string[];
-  rows?: string[][];
-  figure?: FigureData;        // SVG shown with the question
-  answerFigure?: FigureData;  // SVG shown in the answer
+  rows?: Cell[][];            // a cell may be { text, rowspan?, colspan? }
+  answerHead?: string;        // table: extra answer-only column
+  grid?: { rows: number; cols: number };      // crossword
+  given?: [number, number][];                 // crossword: cells printed in the book (1-based row, col)
+  entries?: CwEntry[];                        // crossword
+  figure?: FigureData;        // image or SVG shown with the question
+  answerFigure?: FigureData;  // image or SVG shown in the answer
   answer?: Answer;
 }
 interface Part extends Q { label: string }
@@ -33,6 +42,7 @@ interface Item extends Q {
   reference?: { title: string; body: string };   // collapsible supporting text (transcript, printed answers)
   parts?: Part[];                                // when present, the item-level question fields are ignored
 }
+// `roman` may be "" for a block that has no printed numeral.
 interface Section { roman: string; instruction: string; items: Item[] }
 interface NavLink { label: string; href: string }
 interface Props {
@@ -48,6 +58,31 @@ interface Props {
 const { title, eyebrow, meta, subjectTag, tags = [], sections, prev, next } = Astro.props;
 
 const passageHtml = (p: string) => renderMd(p);
+
+// All question fields QA.astro understands, in one place.
+const qProps = (q: Q, dropWordBox = false) => ({
+  type: q.type,
+  question: q.question,
+  options: q.options,
+  wordBox: dropWordBox ? undefined : q.wordBox,
+  example: q.example,
+  left: q.left,
+  right: q.right,
+  leftHead: q.leftHead,
+  rightHead: q.rightHead,
+  leftLabels: q.leftLabels,
+  rightLabels: q.rightLabels,
+  items: q.items,
+  columns: q.columns,
+  rows: q.rows,
+  answerHead: q.answerHead,
+  grid: q.grid,
+  given: q.given,
+  entries: q.entries,
+  figure: q.figure,
+  answerFigure: q.answerFigure,
+  answer: q.answer,
+});
 ---
 
 <div class="mode-bar">
@@ -74,15 +109,15 @@ const passageHtml = (p: string) => renderMd(p);
 </div>
 
 <div class="solutions-body">
-  {sections.map((s) => (
-    <section class="sol-section" id={`s${s.roman}`}>
+  {sections.map((s, si) => (
+    <section class="sol-section" id={`s${s.roman || `x${si + 1}`}`}>
       <div class="sec-head">
-        <span class="sec-roman">{s.roman}</span>
+        {s.roman && <span class="sec-roman">{s.roman}</span>}
         <span class="sec-instruction">{s.instruction}</span>
       </div>
 
       {s.items.map((it) => (
-        <div class="question-block" id={`s${s.roman}-q${it.n}`}>
+        <div class="question-block" id={`s${s.roman || `x${si + 1}`}-q${it.n}`}>
           <div class="q-number">Question {it.n}</div>
 
           {it.reference && (
@@ -96,42 +131,9 @@ const passageHtml = (p: string) => renderMd(p);
           {it.passage && <blockquote class="passage" set:html={passageHtml(it.passage)} />}
 
           {it.parts ? (
-            it.parts.map((p) => (
-              <QA
-                label={p.label}
-                type={p.type}
-                question={p.question}
-                options={p.options}
-                wordBox={p.wordBox}
-                example={p.example}
-                left={p.left}
-                right={p.right}
-                items={p.items}
-                columns={p.columns}
-                rows={p.rows}
-                figure={p.figure}
-                answerFigure={p.answerFigure}
-                answer={p.answer}
-              />
-            ))
+            it.parts.map((p) => <QA label={p.label} {...qProps(p)} />)
           ) : (
-            <>
-              <QA
-                type={it.type}
-                question={it.question}
-                options={it.options}
-                wordBox={it.passage ? undefined : it.wordBox}
-                example={it.example}
-                left={it.left}
-                right={it.right}
-                items={it.items}
-                columns={it.columns}
-                rows={it.rows}
-                figure={it.figure}
-                answerFigure={it.answerFigure}
-                answer={it.answer}
-              />
-            </>
+            <QA {...qProps(it, !!it.passage)} />
           )}
         </div>
       ))}

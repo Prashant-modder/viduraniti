@@ -5,32 +5,52 @@ import { renderInline } from '@/lib/md';
 // mode "prompt": the table as printed. Any cell containing ______ is a blank to fill in.
 // mode "answer": the completed table; cells that were blank in the prompt are highlighted.
 // `rows` is the printed table (blanks included); `answer` is the same grid fully filled in.
+// A cell is a string, or { text, rowspan?, colspan? } for a merged cell. A row lists only the cells it
+// starts (as in HTML), so a row under a rowspan cell has one cell fewer.
+// `answerHead` (optional): adds an extra answer-only column. In the answer grid each row then carries one
+// extra last cell, e.g. a sentence the student writes after reading the row.
+type Cell = string | { text: string; rowspan?: number; colspan?: number };
 interface Props {
   mode: 'prompt' | 'answer';
   columns: string[];
-  rows: string[][];
-  answer?: string[][];
+  rows: Cell[][];
+  answer?: Cell[][];
+  answerHead?: string;
 }
-const { mode, columns, rows, answer = [] } = Astro.props;
+const { mode, columns, rows, answer = [], answerHead } = Astro.props;
 
-const isBlank = (c: unknown) => /_{3,}/.test(String(c ?? ''));
-const shown = mode === 'answer' && answer.length > 0 ? answer : rows;
+const txt = (c: unknown) => (c && typeof c === 'object' ? String((c as any).text ?? '') : String(c ?? ''));
+const span = (c: unknown, k: 'rowspan' | 'colspan') => (c && typeof c === 'object' ? (c as any)[k] : undefined);
+const isBlank = (c: unknown) => /_{3,}/.test(txt(c));
+const useAnswer = mode === 'answer' && answer.length > 0;
+const shown = useAnswer ? answer : rows;
+const extra = useAnswer && !!answerHead;
 ---
 
 <div class="tbl-wrap">
   <table class="tbl">
     <thead>
-      <tr>{columns.map((c) => <th set:html={renderInline(c)} />)}</tr>
+      <tr>
+        {columns.map((c) => <th set:html={renderInline(c)} />)}
+        {extra && <th>{answerHead}</th>}
+      </tr>
     </thead>
     <tbody>
       {shown.map((row, i) => (
         <tr>
-          {row.map((cell, j) => (
-            <td
-              class={mode === 'answer' && isBlank(rows[i]?.[j]) ? 'fill' : undefined}
-              set:html={renderInline(String(cell ?? ''))}
-            />
-          ))}
+          {row.map((cell, j) => {
+            const isExtra = extra && j === row.length - 1;
+            const printed = rows[i]?.[j];
+            const filled = mode === 'answer' && (isExtra || isBlank(printed));
+            return (
+              <td
+                class={filled ? 'fill' : undefined}
+                rowspan={span(cell, 'rowspan')}
+                colspan={span(cell, 'colspan')}
+                set:html={renderInline(txt(cell))}
+              />
+            );
+          })}
         </tr>
       ))}
     </tbody>

@@ -1,0 +1,95 @@
+---
+import { renderInline } from '@/lib/md';
+
+/*
+  Crossword (also used for "fill the missing letters" grids).
+  Contract (same as the Item fields in src/lib/loader):
+    grid     { rows, cols }
+    given    [row, col][]   cells whose letter is printed in the book (1-based)
+    entries  [{ n, dir: 'across' | 'down', row, col, answer, clue }]   (row/col = 1-based start cell)
+  mode "prompt": numbered empty cells; given cells show their letter; clues listed when entries carry them.
+  mode "answer": every cell filled; cells that were empty in the prompt are highlighted.
+*/
+interface Entry { n: number; dir: 'across' | 'down'; row: number; col: number; answer: string; clue?: string }
+interface Props {
+  mode: 'prompt' | 'answer';
+  grid: { rows: number; cols: number };
+  given?: [number, number][];
+  entries: Entry[];
+}
+const { mode, grid, given = [], entries } = Astro.props;
+
+const key = (r: number, c: number) => `${r},${c}`;
+const givenSet = new Set(given.map(([r, c]) => key(r, c)));
+const cells = new Map<string, { letter: string; num?: number }>();
+for (const e of entries) {
+  [...e.answer.toUpperCase()].forEach((ch, i) => {
+    const r = e.dir === 'down' ? e.row + i : e.row;
+    const c = e.dir === 'across' ? e.col + i : e.col;
+    const k = key(r, c);
+    const cur = cells.get(k) ?? { letter: ch };
+    if (i === 0 && e.n) cur.num = e.n;
+    cells.set(k, cur);
+  });
+}
+const list = (dir: 'across' | 'down') =>
+  entries.filter((e) => e.dir === dir && e.clue).sort((a, b) => a.n - b.n);
+const across = list('across');
+const down = list('down');
+const rowsArr = Array.from({ length: grid.rows }, (_, i) => i + 1);
+const colsArr = Array.from({ length: grid.cols }, (_, i) => i + 1);
+---
+
+<div class="cw-wrap">
+  <div class="cw" style={`grid-template-columns:repeat(${grid.cols},var(--cw-size));`}>
+    {rowsArr.map((r) => colsArr.map((c) => {
+      const cell = cells.get(key(r, c));
+      if (!cell) return <span class="cw-void"></span>;
+      const isGiven = givenSet.has(key(r, c));
+      const show = mode === 'answer' || isGiven;
+      return (
+        <span class={`cw-cell${isGiven ? ' given' : ''}${mode === 'answer' && !isGiven ? ' fill' : ''}`}>
+          {cell.num !== undefined && <i class="cw-n">{cell.num}</i>}
+          {show ? cell.letter : ''}
+        </span>
+      );
+    }))}
+  </div>
+</div>
+
+{mode === 'prompt' && (across.length > 0 || down.length > 0) && (
+  <div class="cw-clues">
+    {across.length > 0 && (
+      <div><b>Across</b><ul>{across.map((e) => <li><span class="cn">{e.n}.</span> <span set:html={renderInline(e.clue ?? '')} /></li>)}</ul></div>
+    )}
+    {down.length > 0 && (
+      <div><b>Down</b><ul>{down.map((e) => <li><span class="cn">{e.n}.</span> <span set:html={renderInline(e.clue ?? '')} /></li>)}</ul></div>
+    )}
+  </div>
+)}
+
+{mode === 'answer' && (across.length > 0 || down.length > 0) && (
+  <div class="cw-clues ans">
+    {across.length > 0 && (
+      <div><b>Across</b><ul>{across.map((e) => <li><span class="cn">{e.n}.</span> {e.answer.toUpperCase()}</li>)}</ul></div>
+    )}
+    {down.length > 0 && (
+      <div><b>Down</b><ul>{down.map((e) => <li><span class="cn">{e.n}.</span> {e.answer.toUpperCase()}</li>)}</ul></div>
+    )}
+  </div>
+)}
+
+<style>
+  .cw-wrap { --cw-size: 30px; max-width: 100%; overflow-x: auto; margin: 4px 0 16px; padding-bottom: 4px; }
+  .cw { display: grid; gap: 0; width: max-content; font-family: var(--font-ui); }
+  .cw-void { display: block; width: var(--cw-size); height: var(--cw-size); }
+  .cw-cell { position: relative; display: flex; align-items: center; justify-content: center; width: var(--cw-size); height: var(--cw-size); box-sizing: border-box; border: 1.5px solid var(--saffron); background: var(--bg); font-size: 15px; font-weight: 600; color: var(--ink); margin: -0.75px; }
+  .cw-cell.given { background: var(--surface); }
+  .cw-cell.fill { background: var(--green-light); color: var(--green); }
+  .cw-n { position: absolute; top: 1px; left: 2px; font-size: 8px; font-style: normal; font-weight: 500; color: var(--ink-muted); line-height: 1; }
+  .cw-clues { display: flex; flex-wrap: wrap; gap: 8px 48px; max-width: 68ch; margin: 0 0 16px; font-family: var(--font-ui); font-size: 14px; line-height: 1.5; }
+  .cw-clues b { display: inline-block; font-size: 12px; background: var(--saffron-light); border-radius: 4px; padding: 1px 8px; margin-bottom: 4px; }
+  .cw-clues ul { list-style: none; margin: 0; padding: 0; }
+  .cw-clues .cn { color: var(--ink-muted); font-weight: 500; }
+  .cw-clues.ans { color: var(--green); }
+</style>
