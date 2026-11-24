@@ -43,7 +43,7 @@ const codeOf = (c: Chapter) => keyOf(c).replace('chapter-', '').toUpperCase();
     <div class="sidebar-unit">
       {u.label && (
         <div class="sidebar-unit-label">
-          {mode === 'unit' && u.slug ? (
+          {u.slug ? (
             <a href={`${base}/${u.slug}`} class={activeUnit === u.slug ? 'active-unit' : ''}>{u.label}</a>
           ) : (
             u.label
@@ -95,6 +95,7 @@ const codeOf = (c: Chapter) => keyOf(c).replace('chapter-', '').toUpperCase();
   }
   .sidebar-unit-label a { color: inherit; text-decoration: none; }
   .sidebar-unit-label a.active-unit { color: var(--saffron); }
+  .sidebar-unit-label a:hover { color: var(--ink); }
   .sidebar-ch { display: flex; flex-direction: column; }
   .sidebar-ch > a {
     font-family: var(--font-ui); font-size: 13px; color: var(--ink-muted);
