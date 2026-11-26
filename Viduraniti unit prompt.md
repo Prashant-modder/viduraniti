@@ -22,13 +22,13 @@
 | Class | `{{CLASS = 8}}` | 1 to 10 |
 | Subject | `{{SUBJECT = english}}` | key from `books.ts`: english, mathematics, hindi, urdu, sanskrit, science, social-science, arts, physical-education, twau, vocational-education, skill-education |
 | Book slug | `{{BOOK_SLUG = poorvi}}` | folder name |
-| Group folder | `{{GROUP = unit-1}}` | `unit-N`, `theme-X`, `project-N`, `section-X`, or `none` for flat books |
-| Group label | `{{GROUP_LABEL = Unit 1: Wit and Wisdom}}` | shown in sidebar |
-| Chapters | `{{CHAPTERS = The Wit that Won Hearts, A Concrete Example, Wisdom Paves the Way}}` | in order |
-| Absolute numbers | `{{ABS_NUMBERS = 1, 2, 3}}` | number in the book; flat books use `chapter-{{ABS}}` |
+| Group folder | `{{GROUP = unit-4}}` | `unit-N`, `theme-X`, `project-N`, `section-X`, or `none` for flat books |
+| Group label | `{{GROUP_LABEL = Unit 4: Environment}}` | shown in sidebar |
+| Chapters | `{{CHAPTERS = The Cherry Tree, Harvest Hymn, Waiting for the Rain}}` | in order |
+| Absolute numbers | `{{ABS_NUMBERS = 10, 11, 12}}` | number in the book; flat books use `chapter-{{ABS}}` |
 | Page status | `{{STATUS = published}}` | animations are always `draft` |
-| Script name | `{{SCRIPT_NAME = create-unit-1.ps1}}` | PowerShell output |
-| Images zip name | `{{ZIP_NAME = unit-1-images.zip}}` | output |
+| Script name | `{{SCRIPT_NAME = create-unit-4.ps1}}` | PowerShell output |
+| Images zip name | `{{ZIP_NAME = unit-4-images.zip}}` | output |
 
 Derived chapter folders: `chapter-{{ABS}}-{{POS}}`, where `POS` = position inside the group (1, 2, 3, ...). Example: `4-1, 5-2, 6-3, 7-1, 8-2, ... 15-3`.
 

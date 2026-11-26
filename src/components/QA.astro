@@ -5,6 +5,7 @@ import Match from './qa/Match.astro';
 import Figure from './qa/Figure.astro';
 import Order from './qa/Order.astro';
 import Table from './qa/Table.astro';
+import Crossword from './qa/Crossword.astro';
 import WordBox from './qa/WordBox.astro';
 import { renderInline } from '@/lib/md';
 
@@ -14,42 +15,60 @@ import { renderInline } from '@/lib/md';
   activity                              answer: Markdown "sample answer" (no single right answer)
   blanks                                answer: string[], one entry per numbered blank
   match                                 left[], right[]; answer: string[] of Column 2 letters in Column 1 order
+                                        optional leftLabels[] / rightLabels[] = labels as printed in the book
   order                                 items[]; answer: number[] of item numbers in correct order
   table                                 columns[], rows[][] (blank cells contain ______); answer: string[][] = the full filled grid
-  Any type may also carry `figure` (shown with the question) and `answerFigure` (shown in the answer): { svg, alt, caption? }
+                                        a cell may be { text, rowspan?, colspan? }; optional answerHead adds an answer-only column
+  crossword                             grid { rows, cols }, given [row, col][], entries [{ n, dir, row, col, answer, clue }]
+                                        (also used for "fill the missing letters" grids); no `answer` needed
+  Any type may also carry `figure` (shown with the question) and `answerFigure` (shown in the answer): { svg | src, alt, caption? }
   If `type` is omitted: options present -> mcq, otherwise short.
 */
 interface FigureData { svg?: string; src?: string; alt: string; caption?: string }
+type Cell = string | { text: string; rowspan?: number; colspan?: number };
+interface CwEntry { n: number; dir: 'across' | 'down'; row: number; col: number; answer: string; clue?: string }
 interface Props {
   label?: string;
-  type?: 'short' | 'long' | 'mcq' | 'fill' | 'rectify' | 'activity' | 'blanks' | 'match' | 'order' | 'table';
+  type?: 'short' | 'long' | 'mcq' | 'fill' | 'rectify' | 'activity' | 'blanks' | 'match' | 'order' | 'table' | 'crossword';
   question?: string;
   options?: string[];
   wordBox?: string[];
   example?: string;
   left?: string[];
   right?: string[];
+  leftHead?: string;
+  rightHead?: string;
+  leftLabels?: string[];
+  rightLabels?: string[];
   items?: string[];
   columns?: string[];
-  rows?: string[][];
+  rows?: Cell[][];
+  answerHead?: string;
+  grid?: { rows: number; cols: number };
+  given?: [number, number][];
+  entries?: CwEntry[];
   figure?: FigureData;
   answerFigure?: FigureData;
-  answer?: string | string[] | number[] | string[][];
+  answer?: string | string[] | number[] | Cell[][];
 }
 const {
   label, type, question, options = [], wordBox = [], example,
-  left = [], right = [], items = [], columns = [], rows = [], figure, answerFigure, answer,
+  left = [], right = [], leftHead, rightHead, leftLabels, rightLabels,
+  items = [], columns = [], rows = [], answerHead,
+  grid, given = [], entries = [],
+  figure, answerFigure, answer,
 } = Astro.props;
 
 const t = type ?? (options.length ? 'mcq' : 'short');
 const isActivity = t === 'activity';
-const hasAnswer = Array.isArray(answer) ? answer.length > 0 : !!answer;
+const isCrossword = t === 'crossword' && !!grid && entries.length > 0;
+const hasAnswer = isCrossword || (Array.isArray(answer) ? answer.length > 0 : !!answer);
 
 const asStrings = (a: unknown): string[] => (Array.isArray(a) ? a.map(String) : a ? [String(a)] : []);
 const textAnswer = asStrings(answer).filter(Boolean).join('\n\n');
 const listAnswer = asStrings(answer);
 const orderAnswer = Array.isArray(answer) ? (answer as unknown[]).map(Number) : [];
-const tableAnswer = t === 'table' && Array.isArray(answer) ? (answer as unknown as string[][]) : [];
+const tableAnswer = t === 'table' && Array.isArray(answer) ? (answer as unknown as Cell[][]) : [];
 ---
 
 <div class="qa">
@@ -60,7 +79,7 @@ const tableAnswer = t === 'table' && Array.isArray(answer) ? (answer as unknown 
     </div>
   )}
 
-  {figure && <Figure svg={figure.svg} alt={figure.alt} caption={figure.caption} />}
+  {figure && <Figure {...(figure as any)} />}
 
   <WordBox words={wordBox} />
 
@@ -72,26 +91,31 @@ const tableAnswer = t === 'table' && Array.isArray(answer) ? (answer as unknown 
     <ul class="q-options">{options.map((o: string) => <li set:html={renderInline(o)} />)}</ul>
   )}
 
-  {t === 'match' && <Match mode="prompt" left={left} right={right} />}
+  {t === 'match' && (
+    <Match mode="prompt" left={left} right={right} leftHead={leftHead} rightHead={rightHead} leftLabels={leftLabels} rightLabels={rightLabels} />
+  )}
   {t === 'order' && <Order mode="prompt" items={items} />}
   {t === 'table' && <Table mode="prompt" columns={columns} rows={rows} />}
+  {isCrossword && <Crossword mode="prompt" grid={grid!} given={given} entries={entries} />}
 
   <div class="answer-label">{isActivity ? 'Sample answer' : 'Answer'}</div>
   <div class="answer-text">
     {!hasAnswer ? (
       <p class="pending">Answer coming soon.</p>
+    ) : isCrossword ? (
+      <Crossword mode="answer" grid={grid!} given={given} entries={entries} />
     ) : t === 'blanks' ? (
       <ol class="blank-answers">{listAnswer.map((a) => <li set:html={renderInline(a)} />)}</ol>
     ) : t === 'match' ? (
-      <Match mode="answer" left={left} right={right} answer={listAnswer} />
+      <Match mode="answer" left={left} right={right} answer={listAnswer} leftHead={leftHead} leftLabels={leftLabels} rightLabels={rightLabels} />
     ) : t === 'order' ? (
       <Order mode="answer" items={items} answer={orderAnswer} />
     ) : t === 'table' ? (
-      <Table mode="answer" columns={columns} rows={rows} answer={tableAnswer} />
+      <Table mode="answer" columns={columns} rows={rows} answer={tableAnswer} answerHead={answerHead} />
     ) : (
       <Prose md={textAnswer} />
     )}
-    {answerFigure && <Figure svg={answerFigure.svg} alt={answerFigure.alt} caption={answerFigure.caption} />}
+    {answerFigure && <Figure {...(answerFigure as any)} />}
   </div>
 
   <div class="answer-actions">
