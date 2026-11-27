@@ -1,0 +1,31 @@
+export const meta = { title: "Glossary", status: "published", tags: ["Vocabulary"] };
+
+export const terms = [
+  { term: "booth", meaning: "rectangular space" },
+  { term: "stables", meaning: "living spaces for animals" },
+  { term: "interacted with", meaning: "communicated with" },
+  { term: "strayed", meaning: "came by mistake" },
+  { term: "munching", meaning: "chewing" },
+  { term: "wagged", meaning: "moved from side to side" },
+  { term: "convey", meaning: "communicate" },
+  { term: "crumbs", meaning: "small pieces of food" },
+  { term: "accompanied", meaning: "went with someone" },
+  { term: "plunging", meaning: "jumping in" },
+  { term: "trunk", meaning: "long nose" },
+  { term: "splashed", meaning: "threw" },
+  { term: "yelped", meaning: "cried" },
+  { term: "delighted", meaning: "happy" },
+  { term: "hugged", meaning: "held closely" },
+  { term: "disappeared", meaning: "was not seen" },
+  { term: "realise", meaning: "understand" },
+  { term: "winced", meaning: "shrunk back in pain or distress" },
+  { term: "chores", meaning: "daily duties" },
+  { term: "slight", meaning: "a little" },
+  { term: "indigestion", meaning: "upset stomach" },
+  { term: "tummy", meaning: "stomach" },
+  { term: "sprang", meaning: "jumped" },
+  { term: "joyous", meaning: "happy" },
+  { term: "swing", meaning: "move side to side or back and forth" },
+  { term: "relieved", meaning: "thankful" },
+  { term: "satisfaction", meaning: "happiness" }
+];

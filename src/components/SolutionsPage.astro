@@ -2,9 +2,10 @@
 import QA from './QA.astro';
 import Prose from './Prose.astro';
 import WordBox from './qa/WordBox.astro';
+import Figure from './qa/Figure.astro';
 import { renderMd } from '@/lib/md';
 
-type QType = 'short' | 'long' | 'mcq' | 'fill' | 'rectify' | 'activity' | 'blanks' | 'match' | 'order' | 'table' | 'crossword';
+type QType = 'short' | 'long' | 'mcq' | 'fill' | 'rectify' | 'activity' | 'blanks' | 'match' | 'order' | 'table' | 'crossword' | 'checklist';
 type Cell = string | { text: string; rowspan?: number; colspan?: number };
 type Answer = string | string[] | number[] | Cell[][];
 
@@ -128,6 +129,7 @@ const qProps = (q: Q, dropWordBox = false) => ({
           )}
 
           {(it.parts || it.passage) && it.wordBox && <WordBox words={it.wordBox} />}
+          {it.parts && it.figure && <Figure {...(it.figure as any)} />}
           {it.passage && <blockquote class="passage" set:html={passageHtml(it.passage)} />}
 
           {it.parts ? (

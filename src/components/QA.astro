@@ -17,6 +17,7 @@ import { renderInline } from '@/lib/md';
   match                                 left[], right[]; answer: string[] of Column 2 letters in Column 1 order
                                         optional leftLabels[] / rightLabels[] = labels as printed in the book
   order                                 items[]; answer: number[] of item numbers in correct order
+  checklist                             items[]; answer: number[] of 1-based item numbers to tick / mark true
   table                                 columns[], rows[][] (blank cells contain ______); answer: string[][] = the full filled grid
                                         a cell may be { text, rowspan?, colspan? }; optional answerHead adds an answer-only column
   crossword                             grid { rows, cols }, given [row, col][], entries [{ n, dir, row, col, answer, clue }]
@@ -29,7 +30,7 @@ type Cell = string | { text: string; rowspan?: number; colspan?: number };
 interface CwEntry { n: number; dir: 'across' | 'down'; row: number; col: number; answer: string; clue?: string }
 interface Props {
   label?: string;
-  type?: 'short' | 'long' | 'mcq' | 'fill' | 'rectify' | 'activity' | 'blanks' | 'match' | 'order' | 'table' | 'crossword';
+  type?: 'short' | 'long' | 'mcq' | 'fill' | 'rectify' | 'activity' | 'blanks' | 'match' | 'order' | 'table' | 'crossword' | 'checklist';
   question?: string;
   options?: string[];
   wordBox?: string[];
@@ -68,6 +69,7 @@ const asStrings = (a: unknown): string[] => (Array.isArray(a) ? a.map(String) : 
 const textAnswer = asStrings(answer).filter(Boolean).join('\n\n');
 const listAnswer = asStrings(answer);
 const orderAnswer = Array.isArray(answer) ? (answer as unknown[]).map(Number) : [];
+const checkedSet = new Set(t === 'checklist' && Array.isArray(answer) ? (answer as unknown[]).map(Number) : []);
 const tableAnswer = t === 'table' && Array.isArray(answer) ? (answer as unknown as Cell[][]) : [];
 ---
 
@@ -95,6 +97,13 @@ const tableAnswer = t === 'table' && Array.isArray(answer) ? (answer as unknown 
     <Match mode="prompt" left={left} right={right} leftHead={leftHead} rightHead={rightHead} leftLabels={leftLabels} rightLabels={rightLabels} />
   )}
   {t === 'order' && <Order mode="prompt" items={items} />}
+  {t === 'checklist' && (
+    <ul class="q-checklist">
+      {items.map((item, idx) => (
+        <li><span class="chk-box" aria-hidden="true">☐</span><span class="chk-num">{idx + 1}.</span> <span set:html={renderInline(item)} /></li>
+      ))}
+    </ul>
+  )}
   {t === 'table' && <Table mode="prompt" columns={columns} rows={rows} />}
   {isCrossword && <Crossword mode="prompt" grid={grid!} given={given} entries={entries} />}
 
@@ -110,6 +119,18 @@ const tableAnswer = t === 'table' && Array.isArray(answer) ? (answer as unknown 
       <Match mode="answer" left={left} right={right} answer={listAnswer} leftHead={leftHead} leftLabels={leftLabels} rightLabels={rightLabels} />
     ) : t === 'order' ? (
       <Order mode="answer" items={items} answer={orderAnswer} />
+    ) : t === 'checklist' ? (
+      <ul class="a-checklist">
+        {items.map((item, idx) => {
+          const isChecked = checkedSet.has(idx + 1);
+          return (
+            <li class={isChecked ? 'is-checked' : 'is-unchecked'}>
+              <span class="chk-mark" aria-hidden="true">{isChecked ? '✓' : '✗'}</span>
+              <span class="chk-num">{idx + 1}.</span> <span set:html={renderInline(item)} />
+            </li>
+          );
+        })}
+      </ul>
     ) : t === 'table' ? (
       <Table mode="answer" columns={columns} rows={rows} answer={tableAnswer} answerHead={answerHead} />
     ) : (
@@ -130,6 +151,13 @@ const tableAnswer = t === 'table' && Array.isArray(answer) ? (answer as unknown 
   .q-text{font-size:17px;font-style:italic;color:var(--ink);margin-bottom:12px;line-height:1.6;padding-left:16px;border-left:3px solid var(--saffron)}
   .q-label{font-family:var(--font-ui);font-style:normal;font-weight:600;color:var(--saffron);margin-right:4px}
   .q-options{list-style:none;margin:0 0 16px 19px;display:flex;flex-direction:column;gap:4px;font-size:16px;color:var(--ink)}
+
+  .q-checklist,.a-checklist{list-style:none;margin:0 0 16px 19px;padding:0;display:flex;flex-direction:column;gap:6px;font-size:16px;max-width:68ch}
+  .chk-box{margin-right:8px;color:var(--ink-muted)}
+  .chk-num{font-family:var(--font-ui);font-weight:600;color:var(--ink-muted);margin-right:4px}
+  .a-checklist .is-checked .chk-mark{color:var(--green);font-weight:700;margin-right:8px}
+  .a-checklist .is-unchecked{color:var(--ink-muted)}
+  .a-checklist .is-unchecked .chk-mark{color:var(--ink-faint);margin-right:8px}
 
   .example{max-width:68ch;margin:0 0 14px 19px;font-size:15px;color:var(--ink-muted)}
   .example b{font-family:var(--font-ui);font-size:13px;color:var(--ink)}
