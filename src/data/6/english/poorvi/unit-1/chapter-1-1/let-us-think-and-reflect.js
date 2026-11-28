@@ -90,7 +90,7 @@ export const sections = [
       {
         n: 4, type: "long",
         question: "How did the sage make Rama Natha believe that there is no magic potion?",
-        answer: "When the dew failed to turn the copper vessel into gold, the sage called Madhumati forward with a big box filled with shining gold coins. He explained that the coins came from selling the bananas grown through Rama Natha's hard work and Madhumati's efforts, proving that hard workâ€”not magicâ€”created the wealth."
+        answer: "When the dew failed to turn the copper vessel into gold, the sage called Madhumati forward with a big box filled with shining gold coins. He explained that the coins came from selling the bananas grown through Rama Natha's hard work and Madhumati's efforts, proving that hard work—not magic—created the wealth."
       },
       {
         n: 5, type: "table",

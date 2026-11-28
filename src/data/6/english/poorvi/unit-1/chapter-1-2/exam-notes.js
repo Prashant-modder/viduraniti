@@ -51,7 +51,7 @@ export const blocks = [
       {
         marks: 5,
         q: "What moral does 'The Raven and the Fox' teach? Explain with reference to the poem.",
-        a: "The poem teaches us not to trust flatterers and never to let pride cloud our judgement. Reynard praised Mr Raven only to trick him into opening his beak and dropping his food. Because Mr Raven let sweet words make him feel proud, he forgot his own limitationâ€”that he could only croakâ€”and lost what he had."
+        a: "The poem teaches us not to trust flatterers and never to let pride cloud our judgement. Reynard praised Mr Raven only to trick him into opening his beak and dropping his food. Because Mr Raven let sweet words make him feel proud, he forgot his own limitation—that he could only croak—and lost what he had."
       }
     ]
   }

@@ -5,7 +5,7 @@ export const chapter = {
   unit: "unit-1",
   author: "Jean de La Fontaine",
   related: [
-    { label: "Ch 1-1 Â· A Bottle of Dew", href: "/ncert/class-6/subject:english/poorvi/unit-1/chapter-1-1" },
-    { label: "Ch 1-3 Â· Rama to the Rescue", href: "/ncert/class-6/subject:english/poorvi/unit-1/chapter-1-3" }
+    { label: "Ch 1-1 · A Bottle of Dew", href: "/ncert/class-6/english/poorvi/unit-1/chapter-1-1" },
+    { label: "Ch 1-3 · Rama to the Rescue", href: "/ncert/class-6/english/poorvi/unit-1/chapter-1-3" }
   ]
 };

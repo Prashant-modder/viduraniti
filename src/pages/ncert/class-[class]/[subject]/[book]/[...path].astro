@@ -94,6 +94,9 @@ const idx = flat.findIndex((c) => c.href === chapterBase);
 const pi = chapterPages.findIndex((l) => l.key === page);
 const prevCh = flat[idx - 1] ? { label: chLabel(flat[idx - 1]), href: flat[idx - 1].href } : null;
 const nextCh = flat[idx + 1] ? { label: chLabel(flat[idx + 1]), href: flat[idx + 1].href } : null;
+const relatedList = noChapter ? [] : (chapter?.related?.length
+  ? chapter.related
+  : [prevCh, nextCh].filter(Boolean).map((c: any) => ({ label: c.label, href: c.href })));
 
 const prev = noChapter ? null
   : kind === 'chapter' ? prevCh
@@ -165,7 +168,7 @@ else {
           tags={pageMod?.meta?.tags ?? []}
           prev={prev}
           next={next}
-          related={chapter?.related ?? []}
+          related={relatedList}
           chrome={kind !== 'unit'}
         >
           {kind === 'unit' && (

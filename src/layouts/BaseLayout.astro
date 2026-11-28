@@ -1,4 +1,7 @@
 ---
+import { BOOKS, SUBJECT_LABELS } from '@/data/books';
+import { loadBook, loadChapter, RESERVED, COLLECTIONS, solutionKeys, prettify } from '@/data/loader';
+
 interface Crumb {
   label: string;
   href?: string;
@@ -8,6 +11,63 @@ interface Props {
   breadcrumb?: Crumb[];
 }
 const { title, breadcrumb = [] } = Astro.props;
+
+type Item = { label: string; href: string };
+const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
+const GROUP = /^(unit|theme|project|section)-/;
+const code = (c: any) => c.href.split('/').pop()!.replace('chapter-', '').toUpperCase();
+const chItem = (c: any): Item => ({ label: `Ch ${code(c)} · ${c.title}`, href: c.href });
+
+// What the dropdown after a crumb lists (its children).
+function childrenOf(href: string): Item[] {
+  try {
+    const p = href.split('/').filter(Boolean);
+    if (p.length === 0) return [
+      { label: 'NCERT', href: '/ncert' }, { label: 'People', href: '/ncert/people' },
+      { label: 'World map', href: '/map' }, { label: 'About', href: '/about' },
+    ];
+    if (p[0] !== 'ncert') return [];
+    if (p.length === 1) return [
+      ...Object.keys(BOOKS).map((n) => ({ label: `Class ${n}`, href: `/ncert/class-${n}` })),
+      { label: 'People', href: '/ncert/people' },
+    ];
+    if (p[1] === 'people') return [];
+    const cls = p[1].replace('class-', '');
+    if (p.length === 2) return Object.entries(BOOKS[cls] ?? {}).map(([sub, b]) => ({
+      label: SUBJECT_LABELS[sub] ?? sub, href: `/ncert/class-${cls}/${sub}`,
+    }));
+    const sub = p[2];
+    const book = BOOKS[cls]?.[sub];
+    if (!book) return [];
+    const base = `/ncert/class-${cls}/${sub}/${book.slug}`;
+    const { units } = loadBook(cls, sub, book.slug);
+    if (p.length === 3) return units.flatMap((u) =>
+      u.slug ? [{ label: u.label ?? prettify(u.slug), href: `${base}/${u.slug}` }] : u.chapters.map(chItem)
+    );
+    if (p.length === 5 && GROUP.test(p[4])) return (units.find((u) => u.slug === p[4])?.chapters ?? []).map(chItem);
+    const ci = p.findIndex((s, i) => i >= 4 && s.startsWith('chapter-'));
+    if (ci < 0 || ci !== p.length - 1) return [];
+    const chPath = p.slice(4, ci + 1).join('/');
+    const chBase = `${base}/${chPath}`;
+    const { pages, collections } = loadChapter(cls, sub, book.slug, chPath);
+    const out: Item[] = RESERVED.filter((n) => pages[n]).map((n) => ({
+      label: pages[n]?.meta?.title ?? prettify(n), href: `${chBase}/${n}`,
+    }));
+    for (const n of solutionKeys(pages)) out.push({ label: `Solutions · ${pages[n]?.meta?.title ?? prettify(n)}`, href: `${chBase}/solutions/${n}` });
+    for (const [ck, info] of Object.entries(COLLECTIONS))
+      for (const n of Object.keys(collections[ck] ?? {}).sort())
+        out.push({ label: `${info.label} · ${collections[ck][n]?.meta?.title ?? prettify(n)}`, href: `${chBase}/${ck}/${n}` });
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+const crumbs = breadcrumb.map((c, i) => {
+  const href = c.href ?? (i === breadcrumb.length - 1 ? path : undefined);
+  return { ...c, kids: href ? childrenOf(href) : [] };
+});
+const isOn = (h: string) => path === h || path.startsWith(h + '/');
 ---
 
 <!doctype html>
@@ -32,13 +92,22 @@ const { title, breadcrumb = [] } = Astro.props;
   <nav>
     <a class="nav-logo" href="/">Vidura<span>Niti</span></a>
     <div class="breadcrumb">
-      {breadcrumb.map((crumb: Crumb, i: number) => (
+      {crumbs.map((crumb, i) => (
         <>
-          {i > 0 && <span class="sep">›</span>}
           {crumb.href
             ? <a href={crumb.href}>{crumb.label}</a>
             : <span class="current">{crumb.label}</span>
           }
+          {crumb.kids.length > 0 ? (
+            <span class="bc-dd">
+              <button class="bc-btn" type="button" aria-label={`${crumb.label} menu`} aria-expanded="false">›</button>
+              <div class="bc-menu" hidden>
+                {crumb.kids.map((k) => <a href={k.href} class={isOn(k.href) ? 'on' : ''}>{k.label}</a>)}
+              </div>
+            </span>
+          ) : (
+            i < crumbs.length - 1 && <span class="sep">›</span>
+          )}
         </>
       ))}
     </div>
@@ -60,6 +129,44 @@ const { title, breadcrumb = [] } = Astro.props;
       html.setAttribute('data-theme', next);
       localStorage.setItem('vn-theme', next);
     });
+
+    (function () {
+      function closeAll() {
+        document.querySelectorAll('.bc-menu').forEach(function (m) { m.hidden = true; });
+        document.querySelectorAll('.bc-btn').forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
+      }
+      document.querySelectorAll('.bc-btn').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var menu = btn.nextElementSibling;
+          var wasClosed = menu.hidden;
+          closeAll();
+          if (!wasClosed) return;
+          var r = btn.getBoundingClientRect();
+          menu.hidden = false;
+          menu.style.top = (r.bottom + 4) + 'px';
+          menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - menu.offsetWidth - 8)) + 'px';
+          btn.setAttribute('aria-expanded', 'true');
+          var on = menu.querySelector('.on');
+          if (on) on.scrollIntoView({ block: 'nearest' });
+        });
+      });
+      document.addEventListener('click', closeAll);
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeAll(); });
+      window.addEventListener('resize', closeAll);
+    })();
   </script>
+
+  <style is:global>
+    .bc-dd { display: inline-flex; }
+    .bc-btn { background: none; border: 0; color: rgba(255,255,255,.5); font: inherit; font-size: 14px; line-height: 1; padding: 4px 6px; border-radius: 4px; cursor: pointer; transition: transform .15s, background .15s, color .15s; }
+    .bc-btn:hover { background: rgba(255,255,255,.12); color: #fff; }
+    .bc-btn[aria-expanded="true"] { transform: rotate(90deg); color: #fff; background: rgba(255,255,255,.12); }
+    .bc-menu { position: fixed; z-index: 200; min-width: 200px; max-width: 360px; max-height: 70vh; overflow-y: auto; padding: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.3); }
+    .bc-menu[hidden] { display: none; }
+    .breadcrumb .bc-menu a { display: block; padding: 7px 12px; border-radius: 6px; font-size: 13px; color: var(--ink); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .breadcrumb .bc-menu a:hover { background: var(--surface-2); color: var(--ink); }
+    .breadcrumb .bc-menu a.on { background: var(--saffron-light); font-weight: 500; }
+  </style>
 </body>
 </html>

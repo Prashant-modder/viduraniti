@@ -96,7 +96,7 @@ He opened his beak, in his foolish pride-`,
       {
         n: 1, type: "short",
         question: "Why does Reynard say that pride is not wise?",
-        answer: "Reynard says that pride is unwise because false pride makes people careless and easy to foolâ€”just as pride caused the Raven to drop his own food."
+        answer: "Reynard says that pride is unwise because false pride makes people careless and easy to fool—just as pride caused the Raven to drop his own food."
       }
     ]
   },

@@ -5,7 +5,7 @@ export const chapter = {
   unit: "unit-3",
   author: "Anita Rau Badami",
   related: [
-    { label: "Ch 8-2 · Paper Boats", href: "/ncert/class-7/subject:english/poorvi/unit-3/chapter-8-2" },
-    { label: "Ch 9-3 · North, South, East, West", href: "/ncert/class-7/subject:english/poorvi/unit-3/chapter-9-3" }
+    { label: "Ch 8-2 · Paper Boats", href: "/ncert/class-7/english/poorvi/unit-3/chapter-8-2" },
+    { label: "Ch 9-3 · North, South, East, West", href: "/ncert/class-7/english/poorvi/unit-3/chapter-9-3" }
   ]
 };

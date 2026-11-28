@@ -102,7 +102,7 @@ answer: "Dividing the hymn into Men's Voices, Women's Voices, and All Voices ref
 {
 n: 6, type: "long",
 question: "How does the poet create the joyous atmosphere of rural India at harvesting time?",
-answer: "Sarojini Naidu uses rich sensory imagery of golden fields, ripe fruit, fragrant garlands, and gourd-flowers, paired with traditional Indian musicÃ¢â‚¬â€cymbals, flute, pipe, and drumÃ¢â‚¬â€and joyful collective chanting ('we hail thee', 'we praise thee') to evoke a festive rural celebration."
+answer: "Sarojini Naidu uses rich sensory imagery of golden fields, ripe fruit, fragrant garlands, and gourd-flowers, paired with traditional Indian music—cymbals, flute, pipe, and drum—and joyful collective chanting ('we hail thee', 'we praise thee') to evoke a festive rural celebration."
 },
 {
 n: 7, type: "long",

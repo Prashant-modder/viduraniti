@@ -4,7 +4,7 @@ export const summary = `"A Bottle of Dew" by Sudha Murty tells the story of Rama
 
 One day, a famous sage named Mahipati visits their town. Rama Natha asks him about the potion. The wise sage tells him to plant banana trees, tend them himself, and collect five litres of winter morning dew from the leaves with his own hands. Determined to get the potion, Rama Natha clears his neglected fields and plants rows of banana trees. Over six years, he builds a huge plantation, while Madhumati harvests the bananas and sells them in the market for a good price.
 
-When Rama Natha finally brings five litres of dew, the sage mutters over the bottle and asks him to test it on a copper vessel. Nothing turns to gold, and Rama Natha feels cheated. Sage Mahipati then calls Madhumati forward with a box full of shining gold coins earned from the banana crop. The sage explains that there is no magic potionâ€”it was Rama Natha's hard work and his wife's effort that created real wealth. Realising the sage's wisdom, Rama Natha works even harder on his plantation.`;
+When Rama Natha finally brings five litres of dew, the sage mutters over the bottle and asks him to test it on a copper vessel. Nothing turns to gold, and Rama Natha feels cheated. Sage Mahipati then calls Madhumati forward with a box full of shining gold coins earned from the banana crop. The sage explains that there is no magic potion—it was Rama Natha's hard work and his wife's effort that created real wealth. Realising the sage's wisdom, Rama Natha works even harder on his plantation.`;
 
 export const moral = `There are no magic shortcuts to wealth or success. Sincere hard work, patience, and smart effort create lasting rewards.`;
 

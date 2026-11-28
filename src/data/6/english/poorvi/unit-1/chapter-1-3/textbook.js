@@ -21,7 +21,7 @@ export const parts = [
   },
   {
     heading: "The Clever Plan",
-    explain: `In the next room, the masked thief has dug a hole through the wall and stands listening beside a wooden chest, wondering where the family hides its money. Hearing their voices, he decides to wait until they fall asleep. Meanwhile, the husband whispers a smart idea to his wife. Speaking loudly enough for the thief to hear, they pretend to discuss what they would name a son if they had oneâ€”and agree on the name "Rama".`,
+    explain: `In the next room, the masked thief has dug a hole through the wall and stands listening beside a wooden chest, wondering where the family hides its money. Hearing their voices, he decides to wait until they fall asleep. Meanwhile, the husband whispers a smart idea to his wife. Speaking loudly enough for the thief to hear, they pretend to discuss what they would name a son if they had one—and agree on the name "Rama".`,
     glossary: [
       { word: "wonder", meaning: "a feeling of surprise" },
       { word: "perhaps", meaning: "maybe" },
@@ -30,7 +30,7 @@ export const parts = [
   },
   {
     heading: "Calling Out 'Rama!'",
-    explain: `The thief listens eagerly, hoping they will mention their money, and grows irritated at what sounds like a silly game. Continuing their act, the wife asks how she would call the boy depending on where he is. First she calls softly for inside the house, then a little louder for the yard, and finallyâ€”when her husband asks what she would do if the boy were out in the streetâ€”she shouts "RAMA! RAMA!" at the top of her lungs.`,
+    explain: `The thief listens eagerly, hoping they will mention their money, and grows irritated at what sounds like a silly game. Continuing their act, the wife asks how she would call the boy depending on where he is. First she calls softly for inside the house, then a little louder for the yard, and finally—when her husband asks what she would do if the boy were out in the street—she shouts "RAMA! RAMA!" at the top of her lungs.`,
     glossary: [
       { word: "yard", meaning: "an area outside a building" },
       { word: "instead", meaning: "in place of someone or something" }
@@ -38,7 +38,7 @@ export const parts = [
   },
   {
     heading: "Caught Red-Handed",
-    explain: `Out on night patrol, Rama, the village kotwal, hears his name echoing from the house and sprints straight there. Reaching the back wall, he notices the freshly dug hole and realises a thief has broken in. Quietly squeezing through the opening, Rama catches the thief just as the burglar sighs in relief that the couple's chatter has stopped. Rama taps him on the shoulder and places him under arrest. Hearing the commotion, the husband and wife celebrate joyfullyâ€”their clever plan worked, and Rama marched the thief away into the night.`,
+    explain: `Out on night patrol, Rama, the village kotwal, hears his name echoing from the house and sprints straight there. Reaching the back wall, he notices the freshly dug hole and realises a thief has broken in. Quietly squeezing through the opening, Rama catches the thief just as the burglar sighs in relief that the couple's chatter has stopped. Rama taps him on the shoulder and places him under arrest. Hearing the commotion, the husband and wife celebrate joyfully—their clever plan worked, and Rama marched the thief away into the night.`,
     glossary: [
       { word: "chatter", meaning: "talk for a long time about unimportant things" }
     ]

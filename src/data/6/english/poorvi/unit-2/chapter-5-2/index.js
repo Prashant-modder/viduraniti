@@ -5,7 +5,7 @@ export const chapter = {
   unit: "unit-2",
   author: "Jill Wolf",
   related: [
-    { label: "Ch 4-1 · The Unlikely Best Friends", href: "/ncert/class-6/subject:english/poorvi/unit-2/chapter-4-1" },
-    { label: "Ch 6-3 · The Chair", href: "/ncert/class-6/subject:english/poorvi/unit-2/chapter-6-3" }
+    { label: "Ch 4-1 · The Unlikely Best Friends", href: "/ncert/class-6/english/poorvi/unit-2/chapter-4-1" },
+    { label: "Ch 6-3 · The Chair", href: "/ncert/class-6/english/poorvi/unit-2/chapter-6-3" }
   ]
 };

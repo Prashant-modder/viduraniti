@@ -73,7 +73,7 @@ Rama: Oh, Oh! Some thief has dug his way into this house.`,
       {
         n: 1, type: "short",
         question: "What did the thief wish would happen? Did it happen?",
-        answer: "The thief wished the couple would stop their silly chatter about naming a child and either talk about where they kept their money or fall asleep so he could rob them. No, it did not happenâ€”instead, their loud calls brought Rama, the kotwal, who arrested him."
+        answer: "The thief wished the couple would stop their silly chatter about naming a child and either talk about where they kept their money or fall asleep so he could rob them. No, it did not happen—instead, their loud calls brought Rama, the kotwal, who arrested him."
       }
     ]
   },
@@ -84,7 +84,7 @@ Rama: Oh, Oh! Some thief has dug his way into this house.`,
       {
         n: 1, type: "long",
         question: "How did the man and his wife get help from the kotwal?",
-        answer: "The man whispered a clever plan to his wife. Pretending to discuss what they would name their future son, they chose 'Rama'â€”the name of the village kotwalâ€”and acted out calling him softly in the house, louder in the yard, and finally shouting 'RAMA!' very loudly as if he were in the street. Hearing his name shouted, the kotwal ran to their house and caught the thief."
+        answer: "The man whispered a clever plan to his wife. Pretending to discuss what they would name their future son, they chose 'Rama'—the name of the village kotwal—and acted out calling him softly in the house, louder in the yard, and finally shouting 'RAMA!' very loudly as if he were in the street. Hearing his name shouted, the kotwal ran to their house and caught the thief."
       }
     ]
   },
@@ -95,7 +95,7 @@ Rama: Oh, Oh! Some thief has dug his way into this house.`,
       {
         n: 1, type: "activity",
         question: "Do you think cleverness can help us solve our problems? Why do you say so?",
-        answer: "*(Personal answer - sample.)* Yes, cleverness and calm thinking can help us solve difficult problems safely. When we panic, we cannot think clearly, but when we use our witâ€”just like the husband and wife in the storyâ€”we can turn even a dangerous situation in our favour without getting hurt."
+        answer: "*(Personal answer - sample.)* Yes, cleverness and calm thinking can help us solve difficult problems safely. When we panic, we cannot think clearly, but when we use our wit—just like the husband and wife in the story—we can turn even a dangerous situation in our favour without getting hurt."
       }
     ]
   }

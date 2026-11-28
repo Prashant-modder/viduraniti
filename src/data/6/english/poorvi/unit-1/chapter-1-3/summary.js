@@ -2,7 +2,7 @@ export const meta = { title: "Summary", status: "published", tags: ["Summary"] }
 
 export const summary = `"Rama to the Rescue" is a humorous Tamil Nadu folk tale about quick thinking and presence of mind. Late one night, a tired husband and wife are getting ready to sleep in their village house when they hear someone breaking through the wall. Once the sound stops, they realise a thief has slipped inside past Rama, the village kotwal.
 
-Hiding inside the room, the thief hears their voices and waits for them to reveal where their money is kept or fall asleep. Instead of panicking, the husband quietly shares a clever plan with his wife. Pretending to chat idly, they talk about naming their future son "Rama" and practise calling himâ€”softly inside the house, louder in the yard, and finally shouting "RAMA!" very loudly as if he were out in the street.
+Hiding inside the room, the thief hears their voices and waits for them to reveal where their money is kept or fall asleep. Instead of panicking, the husband quietly shares a clever plan with his wife. Pretending to chat idly, they talk about naming their future son "Rama" and practise calling him—softly inside the house, louder in the yard, and finally shouting "RAMA!" very loudly as if he were out in the street.
 
 The impatient thief thinks it is foolish chatter, but Rama the kotwal hears his name shouted in the night. He rushes to the house, spots the hole dug in the wall, climbs quietly inside, and arrests the startled thief. By staying calm and thinking smartly, the couple saves themselves from being robbed.`;
 

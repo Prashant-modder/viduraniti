@@ -18,7 +18,7 @@ export const blocks = [
   {
     type: "grammar",
     title: "Contractions, present progressive tense, adverbs, and sentence types",
-    rule: "**Contractions** shorten two words using an apostrophe (*I'm = I am*, *it's = it is*, *they're = they are*). **Present progressive tense** (*am/is/are + verb-ing*) describes actions happening at the moment of speaking. **Adverbs** tell us more about a verb (how, when, whereâ€”e.g. *closely, softly, loudly*). **Exclamatory sentences** express strong feelings (!); **interrogative sentences** ask questions (?).",
+    rule: "**Contractions** shorten two words using an apostrophe (*I'm = I am*, *it's = it is*, *they're = they are*). **Present progressive tense** (*am/is/are + verb-ing*) describes actions happening at the moment of speaking. **Adverbs** tell us more about a verb (how, when, where—e.g. *closely, softly, loudly*). **Exclamatory sentences** express strong feelings (!); **interrogative sentences** ask questions (?).",
     examples: [
       "I'm feeling so sleepy. (contraction + present progressive)",
       "I'll call out softly to him. (adverb of manner)",

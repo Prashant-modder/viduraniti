@@ -224,8 +224,8 @@ pos: 2,
 unit: "unit-4",
 author: "Sarojini Naidu",
 related: [
-{ label: "Ch 10-1 · The Cherry Tree", href: "/ncert/class-8/subject:english/poorvi/unit-4/chapter-10-1" },
-{ label: "Ch 12-3 · Waiting for the Rain", href: "/ncert/class-8/subject:english/poorvi/unit-4/chapter-12-3" }
+{ label: "Ch 10-1 · The Cherry Tree", href: "/ncert/class-8/english/poorvi/unit-4/chapter-10-1" },
+{ label: "Ch 12-3 · Waiting for the Rain", href: "/ncert/class-8/english/poorvi/unit-4/chapter-12-3" }
 ]
 };
 '@
@@ -1043,8 +1043,8 @@ pos: 3,
 unit: "unit-4",
 author: "Kamakshi Balasubramanian",
 related: [
-{ label: "Ch 10-1 · The Cherry Tree", href: "/ncert/class-8/subject:english/poorvi/unit-4/chapter-10-1" },
-{ label: "Ch 11-2 · Harvest Hymn", href: "/ncert/class-8/subject:english/poorvi/unit-4/chapter-11-2" }
+{ label: "Ch 10-1 · The Cherry Tree", href: "/ncert/class-8/english/poorvi/unit-4/chapter-10-1" },
+{ label: "Ch 11-2 · Harvest Hymn", href: "/ncert/class-8/english/poorvi/unit-4/chapter-11-2" }
 ]
 };
 '@
